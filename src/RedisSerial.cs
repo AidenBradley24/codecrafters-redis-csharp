@@ -37,6 +37,7 @@ namespace codecrafters_redis.src
 
         public static string ReadSimpleString(Stream stream)
         {
+            Console.WriteLine("SIMPLE");
             using var br = new BinaryReader(stream, Encoding.UTF8);
             if (br.ReadChar() != '+') throw new Exception("Invalid simple string");
             return ReadUntilCRLF(br);
@@ -44,6 +45,7 @@ namespace codecrafters_redis.src
 
         public static string ReadBulkString(Stream stream)
         {
+            Console.WriteLine("BULK");
             using var br = new BinaryReader(stream, Encoding.UTF8);
             if (br.ReadChar() != '$') throw new Exception("Invalid bulk string");
             int length = int.Parse(ReadUntilCRLF(br));
