@@ -23,7 +23,8 @@ static async Task HandleClient(TcpClient client)
         Console.WriteLine("HI2");
 
         ms.Position = 0;
-        object[] request = (object[])RedisSerial.ReadAny(ms);
+        RedisReader rr = new(ms);
+        object[] request = (object[])rr.ReadAny();
 
         foreach (object obj in request)
         {
@@ -33,10 +34,10 @@ static async Task HandleClient(TcpClient client)
         switch (request[0])
         {
             case "PING":
-                RedisSerial.WriteSimpleString(ns, "PONG");
+                RedisWriter.WriteSimpleString(ns, "PONG");
                 break;
             case "ECHO":
-                RedisSerial.WriteBulkString(ns, (string)request[1]);
+                RedisWriter.WriteBulkString(ns, (string)request[1]);
                 break;
         }
     }
