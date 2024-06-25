@@ -11,16 +11,14 @@ while (true)
     _ = Task.Run(async () => await HandleClient(client));
 }
 
-static Task HandleClient(TcpClient client)
+static async Task HandleClient(TcpClient client)
 {
     NetworkStream ns = client.GetStream();
     byte[] buffer = new byte[1024];
-    ns.Read(buffer);
-
-    if (Encoding.ASCII.GetString(buffer).Contains("PING"))
+    while (client.Connected)
     {
-        ns.Write(Encoding.ASCII.GetBytes("+PONG\r\n"));
+        await ns.ReadAsync(buffer);
+        // don't need to parse request yet
+        await ns.WriteAsync(Encoding.ASCII.GetBytes("+PONG\r\n"));
     }
-
-    return Task.CompletedTask;
 }
