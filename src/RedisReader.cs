@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 
 namespace codecrafters_redis.src
 {
@@ -11,7 +7,7 @@ namespace codecrafters_redis.src
     /// </summary>
     internal class RedisReader(Stream baseStream) : IDisposable
     {
-        private readonly BinaryReader br = new(baseStream);
+        private readonly BinaryReader br = new(baseStream, Encoding.UTF8);
 
         public string ReadSimpleString()
         {
