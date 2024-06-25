@@ -8,7 +8,7 @@ namespace codecrafters_redis.src
 {
     internal class RedisWriter(Stream baseStream) : IDisposable
     {
-        private readonly BinaryWriter bw = new(baseStream, Encoding.ASCII);
+        private readonly BinaryWriter bw = new(baseStream, Encoding.UTF8);
 
         public void WriteSimpleString(string value)
         {
@@ -25,6 +25,7 @@ namespace codecrafters_redis.src
         public void WriteBulkString(string value)
         {
             bw.Write('$');
+            Console.WriteLine(value.Length);
             bw.Write(value.Length.ToString());
             bw.Write("\r\n");
             bw.Write(value);
