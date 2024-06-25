@@ -73,7 +73,6 @@ namespace codecrafters_redis.src
             Console.WriteLine("ANY");
             using var br = new BinaryReader(stream, Encoding.UTF8);
             char first = (char)br.PeekChar();
-            Console.WriteLine(first);
             return first switch
             {
                 '+' => ReadSimpleString(stream),
@@ -88,10 +87,9 @@ namespace codecrafters_redis.src
             List<char> chars = [];
             while (br.PeekChar() != '\r')
             {
-                Console.WriteLine("AAAA");
                 chars.Add(br.ReadChar());
             }
-            br.BaseStream.Position++; // skip \n
+            br.BaseStream.Position += 2; // skip \r\n
             return string.Concat(chars);
         }
     }
