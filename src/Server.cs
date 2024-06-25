@@ -21,6 +21,11 @@ static async Task HandleClient(TcpClient client)
         ms.Position = 0;
         object[] request = (object[])RedisSerial.ReadAny(ms);
 
+        foreach (object obj in request)
+        {
+            Console.WriteLine(obj);
+        }
+
         switch (request[0])
         {
             case "PING":
