@@ -1,6 +1,6 @@
+using codecrafters_redis.src;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 
 TcpListener server = new(IPAddress.Any, 6379);
 server.Start();
@@ -14,11 +14,21 @@ while (true)
 static async Task HandleClient(TcpClient client)
 {
     NetworkStream ns = client.GetStream();
-    byte[] buffer = new byte[1024];
     while (client.Connected)
     {
-        await ns.ReadAsync(buffer);
-        // don't need to parse request yet
-        await ns.WriteAsync(Encoding.ASCII.GetBytes("+PONG\r\n"));
+        using var ms = new MemoryStream();
+        await ns.CopyToAsync(ms);
+        ms.Position = 0;
+        object[] request = (object[])RedisSerial.ReadAny(ms);
+
+        switch (request[0])
+        {
+            case "PING":
+                RedisSerial.WriteSimpleString(ns, "PONG");
+                break;
+            case "ECHO":
+                RedisSerial.WriteSimpleString(ns, (string)request[1]);
+                break;
+        }
     }
 }
