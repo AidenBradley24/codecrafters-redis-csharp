@@ -27,7 +27,7 @@ static async Task HandleClient(TcpClient client)
                 RedisSerial.WriteSimpleString(ns, "PONG");
                 break;
             case "ECHO":
-                RedisSerial.WriteSimpleString(ns, (string)request[1]);
+                RedisSerial.WriteBulkString(ns, (string)request[1]);
                 break;
         }
     }
