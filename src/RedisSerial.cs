@@ -54,6 +54,7 @@ namespace codecrafters_redis.src
 
         public static object[] ReadArray(Stream stream)
         {
+            Console.WriteLine("ARRAY");
             using var br = new BinaryReader(stream, Encoding.UTF8);
             if (br.ReadChar() != '*') throw new Exception("Invalid array");
             int length = int.Parse(ReadUntilCRLF(br));
@@ -67,6 +68,7 @@ namespace codecrafters_redis.src
 
         public static object ReadAny(Stream stream)
         {
+            Console.WriteLine("ANY");
             using var br = new BinaryReader(stream, Encoding.UTF8);
             char first = (char)br.PeekChar();
             return first switch
