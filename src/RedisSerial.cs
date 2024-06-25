@@ -72,8 +72,8 @@ namespace codecrafters_redis.src
         {
             Console.WriteLine("ANY");
             using var br = new BinaryReader(stream, Encoding.UTF8);
+            Console.WriteLine(br.PeekChar());
             char first = (char)br.PeekChar();
-            Console.WriteLine((int)first);
             return first switch
             {
                 '+' => ReadSimpleString(stream),
