@@ -14,10 +14,11 @@ while (true)
 static async Task HandleClient(TcpClient client)
 {
     NetworkStream ns = client.GetStream();
+    byte[] buffer = new byte[1024];
     while (client.Connected)
     {
-        using var ms = new MemoryStream();
-        await ns.CopyToAsync(ms);
+        await ns.ReadAsync(buffer);
+        using var ms = new MemoryStream(buffer);
         ms.Position = 0;
         object[] request = (object[])RedisSerial.ReadAny(ms);
 
