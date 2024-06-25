@@ -18,6 +18,7 @@ static async Task HandleClient(TcpClient client)
     while (client.Connected)
     {
         await ns.ReadAsync(buffer);
+        Console.WriteLine("HI");
         using var ms = new MemoryStream(buffer);
         ms.Position = 0;
         object[] request = (object[])RedisSerial.ReadAny(ms);
