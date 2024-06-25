@@ -83,6 +83,7 @@ namespace codecrafters_redis.src
             List<char> chars = [];
             while (br.PeekChar() != '\r')
             {
+                Console.WriteLine("AAAA");
                 chars.Add(br.ReadChar());
             }
             br.BaseStream.Position++; // skip \n
