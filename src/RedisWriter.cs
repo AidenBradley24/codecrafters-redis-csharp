@@ -8,7 +8,7 @@ namespace codecrafters_redis.src
 {
     internal class RedisWriter(Stream baseStream) : IDisposable
     {
-        private readonly BinaryWriter bw = new(baseStream, Encoding.UTF8);
+        private readonly BinaryWriter bw = new(baseStream, Encoding.ASCII);
 
         public void WriteSimpleString(string value)
         {
