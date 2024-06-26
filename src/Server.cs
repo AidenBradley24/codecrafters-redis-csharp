@@ -1,5 +1,4 @@
 using codecrafters_redis.src;
-using System;
 using System.Net;
 using System.Net.Sockets;
 
@@ -27,7 +26,7 @@ async Task HandleClient(TcpClient client)
         using RedisReader rr = new(ms);
         object[] request = (object[])rr.ReadAny();
 
-        static bool HasArgument(string arg, object[] request, int index)
+        bool HasArgument(string arg, int index)
         {
             return request.Length > index && ((string)request[index]).Equals(arg, StringComparison.InvariantCultureIgnoreCase);
         }
@@ -73,7 +72,8 @@ async Task HandleClient(TcpClient client)
             case "SET":
                 {
                     Console.WriteLine("pls");
-                    DateTime? timeout = request.Length > 3 && ((string)request[3]).Equals("px", StringComparison.InvariantCultureIgnoreCase) ? DateTime.Now + TimeSpan.FromMilliseconds((int)request[3]) : null;
+                    //DateTime? timeout = HasArgument("px", 3) ? DateTime.Now + TimeSpan.FromMilliseconds((int)request[3]) : null;
+                    DateTime? timeout = null; // aaaaa
                     Console.WriteLine("work");
 
                     lock (myDict)
