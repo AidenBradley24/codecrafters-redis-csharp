@@ -11,7 +11,7 @@ namespace codecrafters_redis.src
         
         private void Write(object value)
         {
-            baseStream.Write(Encoding.UTF8.GetBytes(value.ToString()));
+            baseStream.Write(Encoding.UTF8.GetBytes(value.ToString() ?? ""));
         }
 
         public void WriteSimpleString(string value)
@@ -39,6 +39,17 @@ namespace codecrafters_redis.src
                 Write(value);
             }
             Write("\r\n");
+        }
+
+        public void WriteStringArray(string[] strings)
+        {
+            Write("*");
+            Write(strings.Length.ToString());
+            Write("\r\n");
+            foreach (string s in strings)
+            {
+                WriteBulkString(s);
+            }
         }
     }
 }

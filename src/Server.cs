@@ -6,7 +6,8 @@ using System.Security.Cryptography;
 using System;
 
 int port = 6379;
-int? myMaster = null;
+int? myMasterPort = null;
+string? myMasterHostName = null;
 for (int i = 0; i < args.Length; i++)
 {
     if (args[i] == "--port")
@@ -15,7 +16,10 @@ for (int i = 0; i < args.Length; i++)
     }
     else if (args[i] == "--replicaof")
     {
-        myMaster = Convert.ToInt32(args[++i][("localhost ".Length)..]);
+        string m = args[++i];
+        int last = m.LastIndexOf(' ');
+        myMasterHostName = m[..last];
+        myMasterPort = Convert.ToInt32(m[(last+1)..]);
     }
 }
 
@@ -24,9 +28,18 @@ server.Start();
 
 Dictionary<string, (string val, DateTime? timeout)> myCache = [];
 Dictionary<string, object> myInfo = [];
-myInfo.Add("role", myMaster == null ? "master" : "slave");
+myInfo.Add("role", myMasterPort == null ? "master" : "slave");
 myInfo.Add("master_replid", RandomAlphanum(40));
 myInfo.Add("master_repl_offset", 0);
+
+TcpClient? myMaster = null;
+if (myMasterPort != null && myMasterHostName != null)
+{
+    myMaster = new TcpClient(myMasterHostName, (int)myMasterPort);
+    using NetworkStream ns = myMaster.GetStream();
+    RedisWriter rw = new(ns);
+    rw.WriteStringArray(["PING"]);
+}
 
 while (true)
 {
