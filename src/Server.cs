@@ -5,13 +5,15 @@ using System.Net.Sockets;
 TcpListener server = new(IPAddress.Any, 6379);
 server.Start();
 
+Dictionary<string, string> myDict = [];
+
 while (true)
 {
     TcpClient client = server.AcceptTcpClient();
     _ = Task.Run(async () => await HandleClient(client));
 }
 
-static async Task HandleClient(TcpClient client)
+async Task HandleClient(TcpClient client)
 {
     NetworkStream ns = client.GetStream();
     byte[] buffer = new byte[1024];
@@ -37,6 +39,25 @@ static async Task HandleClient(TcpClient client)
                 break;
             case "ECHO":
                 rw.WriteBulkString((string)request[1]);
+                break;
+            case "GET":
+                {
+                    string key;
+                    lock (myDict)
+                    {
+                        key = myDict[(string)request[1]];
+                    }
+                    rw.WriteBulkString(key);
+                }
+                break;
+            case "SET":
+                {
+                    lock (myDict)
+                    {
+                        myDict[(string)request[1]] = (string)request[2];
+                    }
+                    rw.WriteSimpleString("OK");
+                }
                 break;
         }
     }
