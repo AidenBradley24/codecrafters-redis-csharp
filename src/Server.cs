@@ -15,6 +15,7 @@ while (true)
 
 void KeyTimeout(string key, int milliseconds)
 {
+    Console.WriteLine($"STARTED: {milliseconds}");
     Task.Delay(milliseconds).Wait();
     lock (myDict)
     {
@@ -22,8 +23,6 @@ void KeyTimeout(string key, int milliseconds)
         myDict.Remove(key);
     }
 }
-
-
 
 async Task HandleClient(TcpClient client)
 {
