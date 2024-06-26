@@ -136,6 +136,7 @@ async Task HandleClient(TcpClient client)
                 break;
             case "PSYNC":
                 rw.WriteSimpleString($"FULLRESYNC {myInfo["master_replid"]} {myInfo["master_repl_offset"]}");
+                rw.WriteEmptyRDB(); // TODO write actual db
                 break;
         }
     }

@@ -51,5 +51,12 @@ namespace codecrafters_redis.src
                 WriteBulkString(s);
             }
         }
+
+        public void WriteEmptyRDB()
+        {
+            byte[] contents = Convert.FromBase64String("UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==");
+            Write($"${contents.Length}\r\n");
+            baseStream.Write(contents);
+        }
     }
 }
