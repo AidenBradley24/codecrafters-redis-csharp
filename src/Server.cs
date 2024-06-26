@@ -1,6 +1,7 @@
 using codecrafters_redis.src;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 
 int port = 6379;
 for (int i = 0; i < args.Length; i++)
@@ -14,7 +15,9 @@ for (int i = 0; i < args.Length; i++)
 TcpListener server = new(IPAddress.Any, port);
 server.Start();
 
-Dictionary<string, (string val, DateTime? timeout)> myDict = [];
+Dictionary<string, (string val, DateTime? timeout)> myCache = [];
+Dictionary<string, object> myInfo = [];
+myInfo.Add("role", "master");
 
 while (true)
 {
@@ -58,9 +61,9 @@ async Task HandleClient(TcpClient client)
                 {
                     (string val, DateTime? timeout) dat;
                     bool hasVal = false;
-                    lock (myDict)
+                    lock (myCache)
                     {
-                        hasVal = myDict.TryGetValue((string)request[1], out dat);
+                        hasVal = myCache.TryGetValue((string)request[1], out dat);
                     }
 
                     if (!hasVal)
@@ -69,7 +72,7 @@ async Task HandleClient(TcpClient client)
                     }
                     else if(dat.timeout != null && DateTime.Now >= dat.timeout)
                     {
-                        myDict.Remove((string)request[1]);
+                        myCache.Remove((string)request[1]);
                         rw.WriteBulkString(null);
                     }
                     else
@@ -87,11 +90,24 @@ async Task HandleClient(TcpClient client)
                         timeout = DateTime.Now.AddMilliseconds(milliseconds);
                     }
 
-                    lock (myDict)
+                    lock (myCache)
                     {
-                        myDict[(string)request[1]] = ((string)request[2], timeout);
+                        myCache[(string)request[1]] = ((string)request[2], timeout);
                     }
                     rw.WriteSimpleString("OK");
+                }
+                break;
+            case "INFO":
+                {
+                    StringBuilder sb = new();
+                    foreach(KeyValuePair<string, object> pair in myInfo)
+                    {
+                        sb.Append(pair.Key);
+                        sb.Append(':');
+                        sb.Append(pair.Value);
+                        sb.Append('\n');
+                    }
+                    rw.WriteBulkString(sb.ToString());
                 }
                 break;
         }
