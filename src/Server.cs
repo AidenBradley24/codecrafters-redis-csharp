@@ -2,6 +2,8 @@ using codecrafters_redis.src;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Security.Cryptography;
+using System;
 
 int port = 6379;
 int? myMaster = null;
@@ -23,6 +25,8 @@ server.Start();
 Dictionary<string, (string val, DateTime? timeout)> myCache = [];
 Dictionary<string, object> myInfo = [];
 myInfo.Add("role", myMaster == null ? "master" : "slave");
+myInfo.Add("master_replid", RandomAlphanum(40));
+myInfo.Add("master_repl_offset", 0);
 
 while (true)
 {
@@ -117,4 +121,12 @@ async Task HandleClient(TcpClient client)
                 break;
         }
     }
+}
+
+// how bout i do anyway
+static string RandomAlphanum(int length)
+{
+    const string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    return new string(Enumerable.Repeat(chars, length)
+        .Select(s => s[Random.Shared.Next(s.Length)]).ToArray());
 }
