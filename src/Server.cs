@@ -75,9 +75,11 @@ async Task HandleClient(TcpClient client)
                     {
                         myDict[(string)request[1]] = (string)request[2];
                     }
+                    Console.WriteLine("AAA");
                     if (request.Length > 3 && HasArgument("px", 3))
                     {
                         KeyTimeout((string)request[2], (int)request[3]);
+                        Console.WriteLine("AAA2");
                     }
                     rw.WriteSimpleString("OK");
                 }
