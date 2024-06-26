@@ -75,6 +75,8 @@ async Task HandleClient(TcpClient client)
                     if (HasArgument("px", 3))
                     {
                         Console.WriteLine("AAA");
+                        Console.WriteLine(request[3].GetType());
+                        Console.WriteLine(request[3]);
                         int milliseconds = (int)request[3];
                         Console.WriteLine("AAA2");
                         timeout = DateTime.Now.AddMilliseconds(milliseconds);
