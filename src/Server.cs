@@ -1,4 +1,5 @@
 using codecrafters_redis.src;
+using System;
 using System.Net;
 using System.Net.Sockets;
 
@@ -72,7 +73,7 @@ async Task HandleClient(TcpClient client)
             case "SET":
                 {
                     Console.WriteLine("pls");
-                    DateTime? timeout = HasArgument("px", request, 3) ? DateTime.Now + TimeSpan.FromMilliseconds((int)request[3]) : null;
+                    DateTime? timeout = request.Length > 3 && ((string)request[3]).Equals("px", StringComparison.InvariantCultureIgnoreCase) ? DateTime.Now + TimeSpan.FromMilliseconds((int)request[3]) : null;
                     Console.WriteLine("work");
 
                     lock (myDict)
