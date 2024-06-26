@@ -39,6 +39,43 @@ if (myMasterPort != null && myMasterHostName != null)
     using NetworkStream ns = myMaster.GetStream();
     RedisWriter rw = new(ns);
     rw.WriteStringArray(["PING"]);
+    {
+        byte[] buffer = new byte[1024];
+        ns.Read(buffer);
+        using var ms = new MemoryStream(buffer);
+        using RedisReader rr = new(ms);
+        string response = rr.ReadSimpleString();
+        if (!response.Equals("PONG", StringComparison.InvariantCultureIgnoreCase))
+        {
+            throw new Exception("not a pong!");
+        }
+    }
+
+    rw.WriteStringArray(["REPLCONF", "listening-port", port.ToString()]);
+    {
+        byte[] buffer = new byte[1024];
+        ns.Read(buffer);
+        using var ms = new MemoryStream(buffer);
+        using RedisReader rr = new(ms);
+        string response = rr.ReadSimpleString();
+        if (!response.Equals("OK", StringComparison.InvariantCultureIgnoreCase))
+        {
+            throw new Exception("not ok!");
+        }
+    }
+
+    rw.WriteStringArray(["REPLCONF", "capa", "psync2"]);
+    {
+        byte[] buffer = new byte[1024];
+        ns.Read(buffer);
+        using var ms = new MemoryStream(buffer);
+        using RedisReader rr = new(ms);
+        string response = rr.ReadSimpleString();
+        if (!response.Equals("OK", StringComparison.InvariantCultureIgnoreCase))
+        {
+            throw new Exception("not ok!");
+        }
+    }
 }
 
 while (true)
@@ -55,8 +92,8 @@ async Task HandleClient(TcpClient client)
     {
         await ns.ReadAsync(buffer);
         using var ms = new MemoryStream(buffer);
-
         ms.Position = 0;
+
         using RedisReader rr = new(ms);
         object[] request = (object[])rr.ReadAny();
 
@@ -130,6 +167,11 @@ async Task HandleClient(TcpClient client)
                         sb.Append('\n');
                     }
                     rw.WriteBulkString(sb.ToString());
+                }
+                break;
+            case "REPLCONF":
+                {
+                    rw.WriteSimpleString("OK");
                 }
                 break;
         }
