@@ -11,14 +11,12 @@ namespace codecrafters_redis.src
 
         public string ReadSimpleString()
         {
-            Console.WriteLine("SIMPLE");
             if (br.ReadChar() != '+') throw new Exception("Invalid simple string");
             return ReadUntilCRLF();
         }
 
         public string ReadBulkString()
         {
-            Console.WriteLine("BULK");
             if (br.ReadChar() != '$') throw new Exception("Invalid bulk string");
             int length = int.Parse(ReadUntilCRLF());
             string s = Encoding.UTF8.GetString(br.ReadBytes(length));
@@ -28,7 +26,6 @@ namespace codecrafters_redis.src
 
         public object[] ReadArray()
         {
-            Console.WriteLine("ARRAY");
             if (br.ReadChar() != '*') throw new Exception("Invalid array");
             int length = int.Parse(ReadUntilCRLF());
             object[] array = new object[length];
@@ -41,7 +38,6 @@ namespace codecrafters_redis.src
 
         public object ReadAny()
         {
-            Console.WriteLine("ANY");
             char first = (char)br.PeekChar();
             return first switch
             {

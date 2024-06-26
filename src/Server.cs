@@ -18,9 +18,7 @@ static async Task HandleClient(TcpClient client)
     while (client.Connected)
     {
         await ns.ReadAsync(buffer);
-        Console.WriteLine("HI");
         using var ms = new MemoryStream(buffer);
-        Console.WriteLine("HI2");
 
         ms.Position = 0;
         using RedisReader rr = new(ms);
