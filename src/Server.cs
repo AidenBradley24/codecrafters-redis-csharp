@@ -28,7 +28,7 @@ async Task HandleClient(TcpClient client)
 
         bool HasArgument(string arg, int index)
         {
-            return ((string)request[index]).Equals(arg, StringComparison.InvariantCultureIgnoreCase);
+            return request.Length > index && ((string)request[index]).Equals(arg, StringComparison.InvariantCultureIgnoreCase);
         }
 
         foreach (object obj in request)
@@ -71,7 +71,10 @@ async Task HandleClient(TcpClient client)
                 break;
             case "SET":
                 {
-                    DateTime? timeout = request.Length > 3 && HasArgument("px", 3) ? DateTime.Now + TimeSpan.FromMilliseconds((int)request[3]) : null;
+                    Console.WriteLine("pls");
+                    DateTime? timeout = HasArgument("px", 3) ? DateTime.Now + TimeSpan.FromMilliseconds((int)request[3]) : null;
+                    Console.WriteLine("work");
+
                     lock (myDict)
                     {
                         myDict[(string)request[1]] = ((string)request[2], timeout);
