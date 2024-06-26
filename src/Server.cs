@@ -71,13 +71,11 @@ async Task HandleClient(TcpClient client)
                 break;
             case "SET":
                 {
-                    Console.WriteLine("pls");
                     DateTime? timeout = null;
                     if (HasArgument("px", 3))
                     {
-                        timeout = DateTime.Now + TimeSpan.FromMilliseconds((int)request[3]);
+                        timeout = DateTime.Now.AddMilliseconds((int)request[3]));
                     }
-                    Console.WriteLine("work");
 
                     lock (myDict)
                     {
