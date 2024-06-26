@@ -31,7 +31,7 @@ static async Task HandleClient(TcpClient client)
             Console.WriteLine(obj);
         }
 
-        using RedisWriter rw = new(ns);
+        RedisWriter rw = new(ns);
         switch (request[0])
         {
             case "PING":

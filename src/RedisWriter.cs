@@ -2,13 +2,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace codecrafters_redis.src
 {
-    internal class RedisWriter(Stream baseStream) : IDisposable
+    internal class RedisWriter(Stream baseStream)
     {
-        private readonly BinaryWriter bw = new(baseStream, Encoding.UTF8);
+        private readonly Stream baseStream = baseStream;
+        
+        private void Write(object value)
+        {
+            baseStream.Write(Encoding.UTF8.GetBytes(value.ToString()));
+        }
 
         public void WriteSimpleString(string value)
         {
@@ -16,26 +20,18 @@ namespace codecrafters_redis.src
             {
                 throw new ArgumentException("Value cannot contain \\r or \\n");
             }
-            bw.Write('+');
-            bw.Write(value);
-            bw.Write("\r\n");
-            bw.Flush();
+            Write('+');
+            Write(value);
+            Write("\r\n");
         }
 
         public void WriteBulkString(string value)
         {
-            bw.Write('$');
-            Console.WriteLine(value.Length);
-            bw.Write(value.Length.ToString());
-            bw.Write("\r\n");
-            bw.Write(value);
-            bw.Write("\r\n");
-            bw.Flush();
-        }
-
-        public void Dispose()
-        {
-            bw.Dispose();
+            Write('$');
+            Write(value.Length.ToString());
+            Write("\r\n");
+            Write(value);
+            Write("\r\n");
         }
     }
 }
