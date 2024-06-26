@@ -35,47 +35,7 @@ myInfo.Add("master_repl_offset", 0);
 TcpClient? myMaster = null;
 if (myMasterPort != null && myMasterHostName != null)
 {
-    myMaster = new TcpClient(myMasterHostName, (int)myMasterPort);
-    using NetworkStream ns = myMaster.GetStream();
-    RedisWriter rw = new(ns);
-    rw.WriteStringArray(["PING"]);
-    {
-        byte[] buffer = new byte[1024];
-        ns.Read(buffer);
-        using var ms = new MemoryStream(buffer);
-        using RedisReader rr = new(ms);
-        string response = rr.ReadSimpleString();
-        if (!response.Equals("PONG", StringComparison.InvariantCultureIgnoreCase))
-        {
-            throw new Exception("not a pong!");
-        }
-    }
-
-    rw.WriteStringArray(["REPLCONF", "listening-port", port.ToString()]);
-    {
-        byte[] buffer = new byte[1024];
-        ns.Read(buffer);
-        using var ms = new MemoryStream(buffer);
-        using RedisReader rr = new(ms);
-        string response = rr.ReadSimpleString();
-        if (!response.Equals("OK", StringComparison.InvariantCultureIgnoreCase))
-        {
-            throw new Exception("not ok!");
-        }
-    }
-
-    rw.WriteStringArray(["REPLCONF", "capa", "psync2"]);
-    {
-        byte[] buffer = new byte[1024];
-        ns.Read(buffer);
-        using var ms = new MemoryStream(buffer);
-        using RedisReader rr = new(ms);
-        string response = rr.ReadSimpleString();
-        if (!response.Equals("OK", StringComparison.InvariantCultureIgnoreCase))
-        {
-            throw new Exception("not ok!");
-        }
-    }
+    MasterHandshake();
 }
 
 while (true)
@@ -174,6 +134,9 @@ async Task HandleClient(TcpClient client)
                     rw.WriteSimpleString("OK");
                 }
                 break;
+            case "PSYNC":
+                rw.WriteSimpleString($"FULLRESYNC {myInfo["master_replid"]} {myInfo["master_repl_offset"]}");
+                break;
         }
     }
 }
@@ -184,4 +147,59 @@ static string RandomAlphanum(int length)
     const string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
     return new string(Enumerable.Repeat(chars, length)
         .Select(s => s[Random.Shared.Next(s.Length)]).ToArray());
+}
+
+void MasterHandshake()
+{
+    myMaster = new TcpClient(myMasterHostName, (int)myMasterPort);
+    using NetworkStream ns = myMaster.GetStream();
+    RedisWriter rw = new(ns);
+    rw.WriteStringArray(["PING"]);
+    {
+        byte[] buffer = new byte[1024];
+        ns.Read(buffer);
+        using var ms = new MemoryStream(buffer);
+        using RedisReader rr = new(ms);
+        string response = rr.ReadSimpleString();
+        if (!response.Equals("PONG", StringComparison.InvariantCultureIgnoreCase))
+        {
+            throw new Exception("not a pong!");
+        }
+    }
+
+    rw.WriteStringArray(["REPLCONF", "listening-port", port.ToString()]);
+    {
+        byte[] buffer = new byte[1024];
+        ns.Read(buffer);
+        using var ms = new MemoryStream(buffer);
+        using RedisReader rr = new(ms);
+        string response = rr.ReadSimpleString();
+        if (!response.Equals("OK", StringComparison.InvariantCultureIgnoreCase))
+        {
+            throw new Exception("not ok!");
+        }
+    }
+
+    rw.WriteStringArray(["REPLCONF", "capa", "eof", "capa", "psync2"]);
+    {
+        byte[] buffer = new byte[1024];
+        ns.Read(buffer);
+        using var ms = new MemoryStream(buffer);
+        using RedisReader rr = new(ms);
+        string response = rr.ReadSimpleString();
+        if (!response.Equals("OK", StringComparison.InvariantCultureIgnoreCase))
+        {
+            throw new Exception("not ok!");
+        }
+    }
+
+    rw.WriteStringArray(["PSYNC", "?", "-1"]);
+    {
+        byte[] buffer = new byte[1024];
+        ns.Read(buffer);
+        using var ms = new MemoryStream(buffer);
+        using RedisReader rr = new(ms);
+        string response = rr.ReadSimpleString();
+        // ignored response
+    }
 }
