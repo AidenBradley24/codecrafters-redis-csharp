@@ -74,7 +74,7 @@ async Task HandleClient(TcpClient client)
                     DateTime? timeout = null;
                     if (HasArgument("px", 3))
                     {
-                        int milliseconds = Convert.ToInt32(request[3]);
+                        int milliseconds = Convert.ToInt32(request[4]);
                         timeout = DateTime.Now.AddMilliseconds(milliseconds);
                     }
 
