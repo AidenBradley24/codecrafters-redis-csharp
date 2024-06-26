@@ -2,7 +2,16 @@ using codecrafters_redis.src;
 using System.Net;
 using System.Net.Sockets;
 
-TcpListener server = new(IPAddress.Any, 6379);
+int port = 6379;
+for (int i = 0; i < args.Length; i++)
+{
+    if (args[i] == "--port")
+    {
+        port = Convert.ToInt32(args[++i]);
+    }
+}
+
+TcpListener server = new(IPAddress.Any, port);
 server.Start();
 
 Dictionary<string, (string val, DateTime? timeout)> myDict = [];
