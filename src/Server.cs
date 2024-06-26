@@ -15,16 +15,12 @@ while (true)
 
 void KeyTimeout(string key, int milliseconds)
 {
-    System.Timers.Timer timer = new(milliseconds);
-    timer.Elapsed += (sender, e) =>
+    Task.Delay(milliseconds).Wait();
+    lock (myDict)
     {
-        lock (myDict)
-        {
-            Console.WriteLine("REMOVED!");
-            myDict.Remove(key);
-        }
-    };
-    timer.Start();
+        Console.WriteLine("REMOVED!");
+        myDict.Remove(key);
+    }
 }
 
 
