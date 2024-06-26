@@ -5,23 +5,12 @@ using System.Net.Sockets;
 TcpListener server = new(IPAddress.Any, 6379);
 server.Start();
 
-Dictionary<string, string> myDict = [];
+Dictionary<string, (string val, DateTime? timeout)> myDict = [];
 
 while (true)
 {
     TcpClient client = server.AcceptTcpClient();
     _ = Task.Run(async () => await HandleClient(client));
-}
-
-async void KeyTimeout(string key, int milliseconds)
-{
-    Console.WriteLine($"STARTED: {milliseconds}");
-    await Task.Delay(milliseconds);
-    lock (myDict)
-    {
-        Console.WriteLine("REMOVED!");
-        myDict.Remove(key);
-    }
 }
 
 async Task HandleClient(TcpClient client)
@@ -58,23 +47,34 @@ async Task HandleClient(TcpClient client)
                 break;
             case "GET":
                 {
-                    string? key;
+                    (string val, DateTime? timeout) dat;
+                    bool hasVal = false;
                     lock (myDict)
                     {
-                        myDict.TryGetValue((string)request[1], out key);
+                        hasVal = myDict.TryGetValue((string)request[1], out dat);
                     }
-                    rw.WriteBulkString(key);
+
+                    if (!hasVal)
+                    {
+                        rw.WriteBulkString(null);
+                    }
+                    else if(dat.timeout != null && DateTime.Now >= dat.timeout)
+                    {
+                        myDict.Remove((string)request[1]);
+                        rw.WriteBulkString(null);
+                    }
+                    else
+                    {
+                        rw.WriteBulkString(dat.val);
+                    }
                 }
                 break;
             case "SET":
                 {
+                    DateTime? timeout = request.Length > 3 && HasArgument("px", 3) ? DateTime.Now + TimeSpan.FromMilliseconds((int)request[3]) : null;
                     lock (myDict)
                     {
-                        myDict[(string)request[1]] = (string)request[2];
-                    }
-                    if (request.Length > 3 && HasArgument("px", 3))
-                    {
-                        KeyTimeout((string)request[2], (int)request[3]);
+                        myDict[(string)request[1]] = ((string)request[2], timeout);
                     }
                     rw.WriteSimpleString("OK");
                 }
