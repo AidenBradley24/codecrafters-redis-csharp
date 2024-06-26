@@ -4,11 +4,16 @@ using System.Net.Sockets;
 using System.Text;
 
 int port = 6379;
+int? myMaster = null;
 for (int i = 0; i < args.Length; i++)
 {
     if (args[i] == "--port")
     {
         port = Convert.ToInt32(args[++i]);
+    }
+    else if (args[i] == "--replicaof")
+    {
+        myMaster = Convert.ToInt32(args[++i]);
     }
 }
 
@@ -17,7 +22,7 @@ server.Start();
 
 Dictionary<string, (string val, DateTime? timeout)> myCache = [];
 Dictionary<string, object> myInfo = [];
-myInfo.Add("role", "master");
+myInfo.Add("role", myMaster == null ? "master" : "slave");
 
 while (true)
 {
