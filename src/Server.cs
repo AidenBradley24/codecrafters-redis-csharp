@@ -27,6 +27,11 @@ void KeyTimeout(string key, int milliseconds)
     timer.Start();
 }
 
+bool HasArgument(string arg, object[] request, int index)
+{
+    return ((string)request[index]).Equals(arg, StringComparison.InvariantCultureIgnoreCase);
+}
+
 async Task HandleClient(TcpClient client)
 {
     NetworkStream ns = client.GetStream();
@@ -39,11 +44,6 @@ async Task HandleClient(TcpClient client)
         ms.Position = 0;
         using RedisReader rr = new(ms);
         object[] request = (object[])rr.ReadAny();
-
-        bool HasArgument(string arg, int index)
-        {
-            return ((string)request[index]).Equals(arg, StringComparison.InvariantCultureIgnoreCase);
-        }
 
         foreach (object obj in request)
         {
@@ -76,10 +76,12 @@ async Task HandleClient(TcpClient client)
                         myDict[(string)request[1]] = (string)request[2];
                     }
                     Console.WriteLine("AAA");
-                    if (request.Length > 3 && HasArgument("px", 3))
+                    if (request.Length > 3 && HasArgument("px", request, 3))
                     {
-                        KeyTimeout((string)request[2], (int)request[3]);
                         Console.WriteLine("AAA2");
+
+                        KeyTimeout((string)request[2], (int)request[3]);
+                        Console.WriteLine("AAA3");
                     }
                     rw.WriteSimpleString("OK");
                 }
