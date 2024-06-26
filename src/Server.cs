@@ -74,7 +74,7 @@ async Task HandleClient(TcpClient client)
                     DateTime? timeout = null;
                     if (HasArgument("px", 3))
                     {
-                        timeout = DateTime.Now.AddMilliseconds((int)request[3]));
+                        timeout = DateTime.Now.AddMilliseconds((int)request[3]);
                     }
 
                     lock (myDict)
