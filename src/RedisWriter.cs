@@ -25,12 +25,19 @@ namespace codecrafters_redis.src
             Write("\r\n");
         }
 
-        public void WriteBulkString(string value)
+        public void WriteBulkString(string? value)
         {
             Write('$');
-            Write(value.Length.ToString());
-            Write("\r\n");
-            Write(value);
+            if(value == null)
+            {
+                Write("-1");
+            }
+            else
+            {
+                Write(value.Length.ToString());
+                Write("\r\n");
+                Write(value);
+            }
             Write("\r\n");
         }
     }

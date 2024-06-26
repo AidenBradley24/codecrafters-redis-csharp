@@ -24,6 +24,17 @@ namespace codecrafters_redis.src
             return s;
         }
 
+        public int ReadInt()
+        {
+            if (br.ReadChar() != ':') throw new Exception("Invalid int");
+            char first = (char)br.PeekChar();
+            if (first == '-' || first == '+')
+            {
+                br.BaseStream.Position++;
+            }
+            return int.Parse(ReadUntilCRLF()) * first == '-' ? -1 : 1;
+        }
+
         public object[] ReadArray()
         {
             if (br.ReadChar() != '*') throw new Exception("Invalid array");

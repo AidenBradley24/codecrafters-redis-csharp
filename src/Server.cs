@@ -13,6 +13,19 @@ while (true)
     _ = Task.Run(async () => await HandleClient(client));
 }
 
+void KeyTimeout(string key, int milliseconds)
+{
+    System.Timers.Timer timer = new(milliseconds);
+    timer.Elapsed += (sender, e) =>
+    {
+        lock (myDict)
+        {
+            myDict.Remove(key);
+        }
+    };
+    timer.Start();
+}
+
 async Task HandleClient(TcpClient client)
 {
     NetworkStream ns = client.GetStream();
@@ -42,10 +55,10 @@ async Task HandleClient(TcpClient client)
                 break;
             case "GET":
                 {
-                    string key;
+                    string? key;
                     lock (myDict)
                     {
-                        key = myDict[(string)request[1]];
+                        myDict.TryGetValue((string)request[1], out key);
                     }
                     rw.WriteBulkString(key);
                 }
@@ -55,6 +68,10 @@ async Task HandleClient(TcpClient client)
                     lock (myDict)
                     {
                         myDict[(string)request[1]] = (string)request[2];
+                    }
+                    if (request.Length > 3 && ((string)request[3]) == "PX")
+                    {
+                        KeyTimeout((string)request[2], (int)request[3]);
                     }
                     rw.WriteSimpleString("OK");
                 }
