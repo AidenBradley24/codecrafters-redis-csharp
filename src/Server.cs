@@ -13,10 +13,10 @@ while (true)
     _ = Task.Run(async () => await HandleClient(client));
 }
 
-void KeyTimeout(string key, int milliseconds)
+async void KeyTimeout(string key, int milliseconds)
 {
     Console.WriteLine($"STARTED: {milliseconds}");
-    Task.Delay(milliseconds).Wait();
+    await Task.Delay(milliseconds);
     lock (myDict)
     {
         Console.WriteLine("REMOVED!");
@@ -74,7 +74,7 @@ async Task HandleClient(TcpClient client)
                     }
                     if (request.Length > 3 && HasArgument("px", 3))
                     {
-                        _ = Task.Run(() => KeyTimeout((string)request[2], (int)request[3]));
+                        KeyTimeout((string)request[2], (int)request[3]);
                     }
                     rw.WriteSimpleString("OK");
                 }
