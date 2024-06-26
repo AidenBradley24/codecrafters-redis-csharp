@@ -13,7 +13,7 @@ for (int i = 0; i < args.Length; i++)
     }
     else if (args[i] == "--replicaof")
     {
-        myMaster = Convert.ToInt32(args[++i]);
+        myMaster = Convert.ToInt32(args[++i][("localhost ".Length)..]);
     }
 }
 
