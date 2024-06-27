@@ -26,7 +26,7 @@ server.Start();
 
 Dictionary<string, (string val, DateTime? timeout)> myCache = [];
 Dictionary<string, object> myInfo = [];
-List<TcpClient> myReplicas = [];
+List<(string host, int port)> myReplicas = [];
 
 myInfo.Add("role", myMasterPort == null ? "master" : "slave");
 myInfo.Add("master_replid", RandomAlphanum(40));
@@ -73,13 +73,14 @@ Task HandleClient(TcpClient client)
         {
             Console.WriteLine("AA1");
 
-            foreach (TcpClient replica in myReplicas)
+            foreach ((string host, int port) in myReplicas)
             {
                 Console.WriteLine("AA2");
 
                 try
                 {
-                    using NetworkStream masterConnection = replica.GetStream();
+                    TcpClient repClient = new(host, port);
+                    using NetworkStream masterConnection = repClient.GetStream();
                     Console.WriteLine("AA3");
 
                     RedisWriter writer = new(masterConnection);
