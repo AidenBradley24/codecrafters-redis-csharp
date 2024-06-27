@@ -2,6 +2,7 @@ using codecrafters_redis.src;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Collections.Concurrent;
 
 int port = 6379;
 int? myMasterPort = null;
@@ -26,7 +27,7 @@ server.Start();
 
 Dictionary<string, (string val, DateTime? timeout)> myCache = [];
 Dictionary<string, object> myInfo = [];
-List<(string host, int port)> myReplicas = [];
+ConcurrentBag<TcpClient> myReplicas = [];
 
 myInfo.Add("role", myMasterPort == null ? "master" : "slave");
 myInfo.Add("master_replid", RandomAlphanum(40));
@@ -37,7 +38,7 @@ HashSet<string> propagatedCommands = ["SET", "DEL"];
 TcpClient? myMaster = null;
 if (myMasterPort != null && myMasterHostName != null)
 {
-    MasterHandshake();
+    StartReplica();
     return;
 }
 
@@ -62,34 +63,42 @@ Task HandleClient(TcpClient client)
             return request.Length > index && ((string)request[index]).Equals(arg, StringComparison.InvariantCultureIgnoreCase);
         }
 
+        Console.WriteLine($"recieved request:");
         foreach (object obj in request)
         {
             Console.WriteLine(obj);
         }
+        Console.WriteLine("(end of request)");
 
         string command = ((string)request[0]).ToUpperInvariant();
 
         if (propagatedCommands.Contains(command))
         {
             Console.WriteLine("AA1");
-
-            foreach ((string host, int port) in myReplicas)
+            foreach (var replica in myReplicas)
             {
                 Console.WriteLine("AA2");
 
                 try
                 {
-                    TcpClient repClient = new(host, port);
-                    using NetworkStream masterConnection = repClient.GetStream();
-                    Console.WriteLine("AA3");
+                    if (replica.Connected)
+                    {
+                        using NetworkStream masterConnection = replica.GetStream();
+                        Console.WriteLine("AA3");
 
-                    RedisWriter writer = new(masterConnection);
+                        RedisWriter writer = new(masterConnection);
 
-                    Console.WriteLine("AA4");
+                        Console.WriteLine("AA4");
 
-                    writer.WriteArray(request);
+                        writer.WriteArray(request);
 
-                    Console.WriteLine("AA5");
+                        Console.WriteLine("AA5");
+                    }
+                    else
+                    {
+                        Console.WriteLine("replica not connected!");
+                    }
+
                 }
                 catch (Exception ex)
                 {
@@ -169,7 +178,7 @@ Task HandleClient(TcpClient client)
                     {
                         lock (myReplicas)
                         {
-                            myReplicas.Add(("localhost", Convert.ToInt32(request[2])));
+                            myReplicas.Add(client);
                         }
                     }
 
@@ -200,7 +209,7 @@ static string RandomAlphanum(int length)
         .Select(s => s[Random.Shared.Next(s.Length)]).ToArray());
 }
 
-void MasterHandshake()
+void StartReplica()
 {
     myMaster = new TcpClient(myMasterHostName, (int)myMasterPort);
     using NetworkStream ns = myMaster.GetStream();
