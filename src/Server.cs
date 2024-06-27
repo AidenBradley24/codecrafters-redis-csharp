@@ -27,7 +27,7 @@ server.Start();
 
 Dictionary<string, (string val, DateTime? timeout)> myCache = [];
 Dictionary<string, object> myInfo = [];
-ConcurrentBag<(TcpClient ongoingClient, string hostname, int port)> myReplicas = [];
+ConcurrentBag<ReplicaClient> myReplicas = [];
 
 myInfo.Add("role", myMasterPort == null ? "master" : "slave");
 myInfo.Add("master_replid", RandomAlphanum(40));
@@ -75,19 +75,16 @@ Task HandleClient(TcpClient client)
         if (propagatedCommands.Contains(command))
         {
             Console.WriteLine("AA1");
-            foreach ((TcpClient replica, string hostname, int port) in myReplicas)
-            {
 
+            foreach (ReplicaClient repClient in myReplicas)
+            {
                 try
                 {
-                    if (!replica.Connected)
-                    {
-                        Console.WriteLine("replica not connected!\nattempting to reconnect...");
-                        replica.Connect(hostname, port);
-                    }
+                    TcpClient tcp = repClient.Client;
+
                     Console.WriteLine("AA2");
 
-                    using NetworkStream masterConnection = replica.GetStream();
+                    using NetworkStream masterConnection = tcp.GetStream();
                     Console.WriteLine("AA3");
 
                     RedisWriter writer = new(masterConnection);
@@ -177,7 +174,7 @@ Task HandleClient(TcpClient client)
                     {
                         lock (myReplicas)
                         {
-                            myReplicas.Add((client, "localhost", Convert.ToInt32(request[2])));
+                            myReplicas.Add(new ReplicaClient() { Client = client, Hostname = "localhost", Port = Convert.ToInt32(request[2]) });
                         }
                     }
 
@@ -253,4 +250,27 @@ void StartReplica()
     }
 
     _ = Task.Run(async () => await HandleClient(myMaster));
+}
+
+class ReplicaClient
+{
+    private TcpClient? existingClient;
+
+    public string Hostname { get; set; } = "localhost";
+    public int Port { get; set; }
+    public TcpClient Client
+    {
+        get
+        {
+            if (existingClient?.Connected ?? false) return existingClient;
+            Console.WriteLine("replica not connected!\nattempting to reconnect...");
+            existingClient = new TcpClient(Hostname, Port);
+            return existingClient;
+        }
+
+        set
+        {
+            existingClient = value;
+        }
+    }
 }
