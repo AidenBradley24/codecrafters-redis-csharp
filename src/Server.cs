@@ -71,11 +71,23 @@ Task HandleClient(TcpClient client)
 
         if (propagatedCommands.Contains(command))
         {
+            Console.WriteLine("AA1");
+
             foreach (TcpClient replica in myReplicas)
             {
+                Console.WriteLine("AA2");
+
                 using NetworkStream masterConnection = replica.GetStream();
+                Console.WriteLine("AA3");
+
                 RedisWriter writer = new(masterConnection);
+
+                Console.WriteLine("AA4");
+
                 writer.WriteArray(request);
+
+                Console.WriteLine("AA5");
+
             }
         }
 
@@ -115,20 +127,16 @@ Task HandleClient(TcpClient client)
             case "SET":
                 {
                     DateTime? timeout = null;
-                    Console.WriteLine("t1");
                     if (HasArgument("px", 3))
                     {
                         int milliseconds = Convert.ToInt32(request[4]);
                         timeout = DateTime.Now.AddMilliseconds(milliseconds);
                     }
-                    Console.WriteLine("t2");
 
                     lock (myCache)
                     {
                         myCache[(string)request[1]] = ((string)request[2], timeout);
                     }
-
-                    Console.WriteLine("t3");
 
                     rw.WriteSimpleString("OK");
                 }
