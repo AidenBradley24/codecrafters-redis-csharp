@@ -77,16 +77,24 @@ Task HandleClient(TcpClient client)
             {
                 Console.WriteLine("AA2");
 
-                using NetworkStream masterConnection = replica.GetStream();
-                Console.WriteLine("AA3");
+                try
+                {
+                    using NetworkStream masterConnection = replica.GetStream();
+                    Console.WriteLine("AA3");
 
-                RedisWriter writer = new(masterConnection);
+                    RedisWriter writer = new(masterConnection);
 
-                Console.WriteLine("AA4");
+                    Console.WriteLine("AA4");
 
-                writer.WriteArray(request);
+                    writer.WriteArray(request);
 
-                Console.WriteLine("AA5");
+                    Console.WriteLine("AA5");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+
 
             }
         }
