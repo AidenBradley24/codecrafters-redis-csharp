@@ -79,7 +79,7 @@ Task HandleClient(TcpClient client)
             }
         }
 
-        RedisWriter rw = new(ns) { Enabled = (string)myInfo["role"] != "slave" };
+        RedisWriter rw = new(ns) { Enabled = true };
         switch (command)
         {
             case "PING":
