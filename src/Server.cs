@@ -188,6 +188,8 @@ Task HandleClient(TcpClient client)
         }
     }
 
+    Console.WriteLine($"closing connection: {client.Client.RemoteEndPoint}")
+    client.Dispose();
     return Task.CompletedTask;
 }
 
