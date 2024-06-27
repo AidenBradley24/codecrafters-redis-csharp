@@ -22,9 +22,6 @@ for (int i = 0; i < args.Length; i++)
     }
 }
 
-TcpListener server = new(IPAddress.Any, port);
-server.Start();
-
 Dictionary<string, (string val, DateTime? timeout)> myCache = [];
 Dictionary<string, object> myInfo = [];
 ConcurrentBag<ReplicaClient> myReplicas = [];
@@ -42,6 +39,8 @@ if (myMasterPort != null && myMasterHostName != null)
     return;
 }
 
+TcpListener server = new(IPAddress.Any, port);
+server.Start();
 
 while (true)
 {
@@ -51,6 +50,7 @@ while (true)
 
 Task HandleClient(TcpClient client)
 {
+    Console.WriteLine($"NEW CLIENT!! {client.Client.RemoteEndPoint}");
     NetworkStream ns = client.GetStream();
     byte[] buffer = new byte[1024];
     while (client.Connected)
