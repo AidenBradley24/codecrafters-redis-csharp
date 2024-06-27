@@ -27,7 +27,7 @@ server.Start();
 
 Dictionary<string, (string val, DateTime? timeout)> myCache = [];
 Dictionary<string, object> myInfo = [];
-ConcurrentBag<TcpClient> myReplicas = [];
+ConcurrentBag<(TcpClient ongoingClient, string hostname, int port)> myReplicas = [];
 
 myInfo.Add("role", myMasterPort == null ? "master" : "slave");
 myInfo.Add("master_replid", RandomAlphanum(40));
@@ -75,29 +75,28 @@ Task HandleClient(TcpClient client)
         if (propagatedCommands.Contains(command))
         {
             Console.WriteLine("AA1");
-            foreach (var replica in myReplicas)
+            foreach ((TcpClient replica, string hostname, int port) in myReplicas)
             {
-                Console.WriteLine("AA2");
 
                 try
                 {
-                    if (replica.Connected)
+                    if (!replica.Connected)
                     {
-                        using NetworkStream masterConnection = replica.GetStream();
-                        Console.WriteLine("AA3");
-
-                        RedisWriter writer = new(masterConnection);
-
-                        Console.WriteLine("AA4");
-
-                        writer.WriteArray(request);
-
-                        Console.WriteLine("AA5");
+                        Console.WriteLine("replica not connected!\nattempting to reconnect...");
+                        replica.Connect(hostname, port);
                     }
-                    else
-                    {
-                        Console.WriteLine("replica not connected!");
-                    }
+                    Console.WriteLine("AA2");
+
+                    using NetworkStream masterConnection = replica.GetStream();
+                    Console.WriteLine("AA3");
+
+                    RedisWriter writer = new(masterConnection);
+
+                    Console.WriteLine("AA4");
+
+                    writer.WriteArray(request);
+
+                    Console.WriteLine("AA5");
 
                 }
                 catch (Exception ex)
@@ -178,7 +177,7 @@ Task HandleClient(TcpClient client)
                     {
                         lock (myReplicas)
                         {
-                            myReplicas.Add(client);
+                            myReplicas.Add((client, "localhost", Convert.ToInt32(request[2])));
                         }
                     }
 
