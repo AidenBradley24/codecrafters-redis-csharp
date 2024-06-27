@@ -2,8 +2,6 @@ using codecrafters_redis.src;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Security.Cryptography;
-using System;
 
 int port = 6379;
 int? myMasterPort = null;
@@ -28,6 +26,8 @@ server.Start();
 
 Dictionary<string, (string val, DateTime? timeout)> myCache = [];
 Dictionary<string, object> myInfo = [];
+List<TcpClient> myReplicas = [];
+
 myInfo.Add("role", myMasterPort == null ? "master" : "slave");
 myInfo.Add("master_replid", RandomAlphanum(40));
 myInfo.Add("master_repl_offset", 0);
@@ -38,23 +38,21 @@ if (myMasterPort != null && myMasterHostName != null)
     MasterHandshake();
 }
 
+HashSet<string> propagatedCommands = ["SET", "DEL"];
+
 while (true)
 {
     TcpClient client = server.AcceptTcpClient();
     _ = Task.Run(async () => await HandleClient(client));
 }
 
-async Task HandleClient(TcpClient client)
+Task HandleClient(TcpClient client)
 {
     NetworkStream ns = client.GetStream();
     byte[] buffer = new byte[1024];
     while (client.Connected)
     {
-        await ns.ReadAsync(buffer);
-        using var ms = new MemoryStream(buffer);
-        ms.Position = 0;
-
-        using RedisReader rr = new(ms);
+        using RedisReader rr = InitRead(ns, buffer);
         object[] request = (object[])rr.ReadAny();
 
         bool HasArgument(string arg, int index)
@@ -67,8 +65,20 @@ async Task HandleClient(TcpClient client)
             Console.WriteLine(obj);
         }
 
-        RedisWriter rw = new(ns);
-        switch (((string)request[0]).ToUpperInvariant())
+        string command = ((string)request[0]).ToUpperInvariant();
+
+        if (propagatedCommands.Contains(command))
+        {
+            foreach (TcpClient replica in myReplicas)
+            {
+                using NetworkStream masterConnection = replica.GetStream();
+                RedisWriter writer = new(masterConnection);
+                writer.WriteArray(request);
+            }
+        }
+
+        RedisWriter rw = new(ns) { Enabled = (string)myInfo["role"] != "slave" };
+        switch (command)
         {
             case "PING":
                 rw.WriteSimpleString("PONG");
@@ -131,6 +141,11 @@ async Task HandleClient(TcpClient client)
                 break;
             case "REPLCONF":
                 {
+                    if (HasArgument("listening-port", 1))
+                    {
+                        myReplicas.Add(new TcpClient("localhost", Convert.ToInt32(request[2])));
+                    }
+
                     rw.WriteSimpleString("OK");
                 }
                 break;
@@ -140,9 +155,17 @@ async Task HandleClient(TcpClient client)
                 break;
         }
     }
+
+    return Task.CompletedTask;
 }
 
-// how bout i do anyway
+static RedisReader InitRead(NetworkStream ns, byte[] buffer)
+{
+    ns.Read(buffer);
+    var ms = new MemoryStream(buffer);
+    return new RedisReader(ms);
+}
+
 static string RandomAlphanum(int length)
 {
     const string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -155,12 +178,11 @@ void MasterHandshake()
     myMaster = new TcpClient(myMasterHostName, (int)myMasterPort);
     using NetworkStream ns = myMaster.GetStream();
     RedisWriter rw = new(ns);
+    byte[] buffer = new byte[1024];
+
     rw.WriteStringArray(["PING"]);
     {
-        byte[] buffer = new byte[1024];
-        ns.Read(buffer);
-        using var ms = new MemoryStream(buffer);
-        using RedisReader rr = new(ms);
+        using RedisReader rr = InitRead(ns, buffer);
         string response = rr.ReadSimpleString();
         if (!response.Equals("PONG", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -170,10 +192,7 @@ void MasterHandshake()
 
     rw.WriteStringArray(["REPLCONF", "listening-port", port.ToString()]);
     {
-        byte[] buffer = new byte[1024];
-        ns.Read(buffer);
-        using var ms = new MemoryStream(buffer);
-        using RedisReader rr = new(ms);
+        using RedisReader rr = InitRead(ns, buffer);
         string response = rr.ReadSimpleString();
         if (!response.Equals("OK", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -183,10 +202,7 @@ void MasterHandshake()
 
     rw.WriteStringArray(["REPLCONF", "capa", "eof", "capa", "psync2"]);
     {
-        byte[] buffer = new byte[1024];
-        ns.Read(buffer);
-        using var ms = new MemoryStream(buffer);
-        using RedisReader rr = new(ms);
+        using RedisReader rr = InitRead(ns, buffer);
         string response = rr.ReadSimpleString();
         if (!response.Equals("OK", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -196,10 +212,7 @@ void MasterHandshake()
 
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
-        byte[] buffer = new byte[1024];
-        ns.Read(buffer);
-        using var ms = new MemoryStream(buffer);
-        using RedisReader rr = new(ms);
+        using RedisReader rr = InitRead(ns, buffer);
         string response = rr.ReadSimpleString();
         // ignored response
     }

@@ -55,6 +55,7 @@ namespace codecrafters_redis.src
                 '+' => ReadSimpleString(),
                 '$' => ReadBulkString(),
                 '*' => ReadArray(),
+                ':' => ReadInt(),
                 _ => throw new Exception($"Invalid type: {first}"),
             };
         }
@@ -73,6 +74,7 @@ namespace codecrafters_redis.src
         public void Dispose()
         {
             br.Dispose();
+            baseStream.Dispose();
         }
     }
 }
