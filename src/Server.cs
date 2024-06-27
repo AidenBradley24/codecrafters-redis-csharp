@@ -169,7 +169,7 @@ Task HandleClient(TcpClient client)
                     {
                         lock (myReplicas)
                         {
-                            myReplicas.Add(client);
+                            myReplicas.Add(("localhost", Convert.ToInt32(request[2])));
                         }
                     }
 
