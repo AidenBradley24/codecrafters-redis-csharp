@@ -79,7 +79,7 @@ Task HandleClient(TcpClient client)
             }
         }
 
-        RedisWriter rw = new(ns) { Enabled = true };
+        RedisWriter rw = new(ns) { Enabled = (string)myInfo["role"] != "slave" };
         switch (command)
         {
             case "PING":
@@ -115,16 +115,21 @@ Task HandleClient(TcpClient client)
             case "SET":
                 {
                     DateTime? timeout = null;
+                    Console.WriteLine("t1");
                     if (HasArgument("px", 3))
                     {
                         int milliseconds = Convert.ToInt32(request[4]);
                         timeout = DateTime.Now.AddMilliseconds(milliseconds);
                     }
+                    Console.WriteLine("t2");
 
                     lock (myCache)
                     {
                         myCache[(string)request[1]] = ((string)request[2], timeout);
                     }
+
+                    Console.WriteLine("t3");
+
                     rw.WriteSimpleString("OK");
                 }
                 break;
