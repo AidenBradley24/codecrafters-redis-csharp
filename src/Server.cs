@@ -32,13 +32,15 @@ myInfo.Add("role", myMasterPort == null ? "master" : "slave");
 myInfo.Add("master_replid", RandomAlphanum(40));
 myInfo.Add("master_repl_offset", 0);
 
+HashSet<string> propagatedCommands = ["SET", "DEL"];
+
 TcpClient? myMaster = null;
 if (myMasterPort != null && myMasterHostName != null)
 {
     MasterHandshake();
+    return;
 }
 
-HashSet<string> propagatedCommands = ["SET", "DEL"];
 
 while (true)
 {
@@ -143,7 +145,10 @@ Task HandleClient(TcpClient client)
                 {
                     if (HasArgument("listening-port", 1))
                     {
-                        myReplicas.Add(new TcpClient("localhost", Convert.ToInt32(request[2])));
+                        lock (myReplicas)
+                        {
+                            myReplicas.Add(client);
+                        }
                     }
 
                     rw.WriteSimpleString("OK");
@@ -216,4 +221,6 @@ void MasterHandshake()
         string response = rr.ReadSimpleString();
         // ignored response
     }
+
+    _ = Task.Run(async () => await HandleClient(myMaster));
 }
