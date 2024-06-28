@@ -246,8 +246,9 @@ void StartReplica()
         RedisReader rr = InitRead(ns, buffer);
         string response = rr.ReadSimpleString();
         // ignored response
-        rw.WriteSimpleString("OK");
     }
+    rw.WriteSimpleString("OK");
+
     Console.WriteLine("handshake 4/4");
 
     _ = Task.Run(async () => await HandleClient(myMaster));
