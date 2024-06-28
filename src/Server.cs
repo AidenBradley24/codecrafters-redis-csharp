@@ -95,6 +95,8 @@ Task HandleClient(TcpClient client)
 
                     Console.WriteLine("AA5");
 
+                    tcp.Close();
+
                 }
                 catch (Exception ex)
                 {
