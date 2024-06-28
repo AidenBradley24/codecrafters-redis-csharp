@@ -28,8 +28,7 @@ myInfo.Add("role", myMasterPort == null ? "master" : "slave");
 myInfo.Add("master_replid", RandomAlphanum(40));
 myInfo.Add("master_repl_offset", 0);
 
-ConcurrentBag<ReplicaClient> myReplicas = [];
-bool ongoingHandshake = false;
+ConcurrentBag<TcpClient> myReplicas = [];
 
 HashSet<string> propagatedCommands = ["SET", "DEL", "INFO"];
 
@@ -77,15 +76,14 @@ Task HandleClient(TcpClient client)
 
         if (propagatedCommands.Contains(command))
         {
-            foreach (ReplicaClient repClient in myReplicas)
+            foreach (TcpClient repClient in myReplicas)
             {
                 try
                 {
-                    TcpClient tcp = repClient.Client;
-                    NetworkStream masterConnection = tcp.GetStream();
+                    NetworkStream masterConnection = repClient.GetStream();
                     RedisWriter writer = new(masterConnection);
                     writer.WriteArray(request);
-                    Console.WriteLine($"command replicated to {repClient.Port}");
+                    Console.WriteLine($"command replicated to {repClient}");
                 }
                 catch (Exception ex)
                 {
@@ -159,12 +157,10 @@ Task HandleClient(TcpClient client)
                 break;
             case "REPLCONF":
                 {
-                    ongoingHandshake = true;
                     if (HasArgument("listening-port", 1))
                     {
                         int port = Convert.ToInt32(request[2]);
-                        Console.WriteLine($"added client: {port}");
-                        myReplicas.Add(new ReplicaClient() { Client = client, Hostname = "localhost", Port = port });
+                        Console.WriteLine($"adding client: {port}");
                     }
 
                     rw.WriteSimpleString("OK");
@@ -173,7 +169,7 @@ Task HandleClient(TcpClient client)
             case "PSYNC":
                 rw.WriteSimpleString($"FULLRESYNC {myInfo["master_replid"]} {myInfo["master_repl_offset"]}");
                 rw.WriteEmptyRDB(); // TODO write actual db
-                ongoingHandshake = false;
+                myReplicas.Add(client);
                 break;
             case "FULLRESYNC":
                 Console.WriteLine("resync");
@@ -252,27 +248,4 @@ void StartReplica()
     Console.WriteLine("handshake 4/4");
 
     _ = Task.Run(async () => await HandleClient(myMaster));
-}
-
-class ReplicaClient
-{
-    private TcpClient? existingClient;
-
-    public string Hostname { get; set; } = "localhost";
-    public int Port { get; set; }
-    public TcpClient Client
-    {
-        get
-        {
-            if (existingClient?.Connected ?? false) return existingClient;
-            Console.WriteLine("replica not connected!\nattempting to reconnect...");  
-            existingClient = new TcpClient(Hostname, Port);
-            return existingClient;
-        }
-
-        set
-        {
-            existingClient = value;
-        }
-    }
 }
