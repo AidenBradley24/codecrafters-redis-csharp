@@ -74,34 +74,19 @@ Task HandleClient(TcpClient client)
 
         if (propagatedCommands.Contains(command))
         {
-            Console.WriteLine("AA1");
-
             foreach (ReplicaClient repClient in myReplicas)
             {
                 try
                 {
                     TcpClient tcp = repClient.Client;
-
-                    Console.WriteLine("AA2");
-
                     NetworkStream masterConnection = tcp.GetStream();
-                    Console.WriteLine("AA3");
-
                     RedisWriter writer = new(masterConnection);
-
-                    Console.WriteLine("AA4");
-
                     writer.WriteArray(request);
-
-                    Console.WriteLine("AA5");
-
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.ToString());
                 }
-
-
             }
         }
 
@@ -184,6 +169,9 @@ Task HandleClient(TcpClient client)
             case "PSYNC":
                 rw.WriteSimpleString($"FULLRESYNC {myInfo["master_replid"]} {myInfo["master_repl_offset"]}");
                 rw.WriteEmptyRDB(); // TODO write actual db
+                break;
+            case "FULLRESYNC":
+                Console.WriteLine("resync");
                 break;
         }
     }
