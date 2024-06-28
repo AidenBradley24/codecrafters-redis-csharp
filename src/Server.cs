@@ -23,12 +23,13 @@ for (int i = 0; i < args.Length; i++)
 }
 
 Dictionary<string, (string val, DateTime? timeout)> myCache = [];
-Dictionary<string, object> myInfo = [];
-ConcurrentBag<ReplicaClient> myReplicas = [];
-
+Dictionary<string, object> myInfo = []; 
 myInfo.Add("role", myMasterPort == null ? "master" : "slave");
 myInfo.Add("master_replid", RandomAlphanum(40));
 myInfo.Add("master_repl_offset", 0);
+
+ConcurrentBag<ReplicaClient> myReplicas = [];
+bool ongoingHandshake = false;
 
 HashSet<string> propagatedCommands = ["SET", "DEL", "INFO"];
 
@@ -71,6 +72,12 @@ Task HandleClient(TcpClient client)
             Console.WriteLine(obj);
         }
         Console.WriteLine("(end of request)");
+
+        while (ongoingHandshake)
+        {
+            Console.WriteLine("Handshake ongoing!");
+            Task.Delay(20);
+        }
 
         string command = ((string)request[0]).ToUpperInvariant();
 
@@ -158,6 +165,7 @@ Task HandleClient(TcpClient client)
                 break;
             case "REPLCONF":
                 {
+                    ongoingHandshake = true;
                     if (HasArgument("listening-port", 1))
                     {
                         int port = Convert.ToInt32(request[2]);
@@ -171,6 +179,7 @@ Task HandleClient(TcpClient client)
             case "PSYNC":
                 rw.WriteSimpleString($"FULLRESYNC {myInfo["master_replid"]} {myInfo["master_repl_offset"]}");
                 rw.WriteEmptyRDB(); // TODO write actual db
+                ongoingHandshake = false;
                 break;
             case "FULLRESYNC":
                 Console.WriteLine("resync");
@@ -214,7 +223,7 @@ void StartReplica()
             throw new Exception("not a pong!");
         }
     }
-    Console.WriteLine("1/4");
+    Console.WriteLine("handshake 1/4");
 
     rw.WriteStringArray(["REPLCONF", "listening-port", port.ToString()]);
     {
@@ -225,7 +234,7 @@ void StartReplica()
             throw new Exception("not ok!");
         }
     }
-    Console.WriteLine("2/4");
+    Console.WriteLine("handshake 2/4");
 
     rw.WriteStringArray(["REPLCONF", "capa", "eof", "capa", "psync2"]);
     {
@@ -236,7 +245,7 @@ void StartReplica()
             throw new Exception("not ok!");
         }
     }
-    Console.WriteLine("3/4");
+    Console.WriteLine("handshake 3/4");
 
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
@@ -244,7 +253,7 @@ void StartReplica()
         string response = rr.ReadSimpleString();
         // ignored response
     }
-    Console.WriteLine("4/4");
+    Console.WriteLine("handshake 4/4");
 
     _ = Task.Run(async () => await HandleClient(myMaster));
 }
