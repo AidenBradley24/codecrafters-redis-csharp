@@ -30,6 +30,8 @@ myInfo.Add("role", myMasterPort == null ? "master" : "slave");
 myInfo.Add("master_replid", RandomAlphanum(40));
 myInfo.Add("master_repl_offset", 0);
 
+HashSet<string> propagatedCommands = ["SET", "DEL", "INFO"];
+
 TcpListener server = new(IPAddress.Any, port);
 server.Start();
 
@@ -70,19 +72,22 @@ Task HandleClient(TcpClient client)
 
         string command = ((string)request[0]).ToUpperInvariant();
 
-        foreach (ReplicaClient repClient in myReplicas)
+        if (propagatedCommands.Contains(command))
         {
-            try
+            foreach (ReplicaClient repClient in myReplicas)
             {
-                TcpClient tcp = repClient.Client;
-                NetworkStream masterConnection = tcp.GetStream();
-                RedisWriter writer = new(masterConnection);
-                writer.WriteArray(request);
-                Console.WriteLine($"command replicated to {repClient.Port}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
+                try
+                {
+                    TcpClient tcp = repClient.Client;
+                    NetworkStream masterConnection = tcp.GetStream();
+                    RedisWriter writer = new(masterConnection);
+                    writer.WriteArray(request);
+                    Console.WriteLine($"command replicated to {repClient.Port}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
             }
         }
 
