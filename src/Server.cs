@@ -80,7 +80,7 @@ Task HandleClient(TcpClient client)
             {
                 try
                 {
-                    TcpClient tcp = repClient.Client;
+                    using TcpClient tcp = repClient.Client;
 
                     Console.WriteLine("AA2");
 
