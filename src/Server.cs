@@ -79,6 +79,12 @@ Task HandleClient(TcpClient client)
         {
             foreach (ReplicaClient repClient in myReplicas)
             {
+                while (ongoingHandshake)
+                {
+                    Console.WriteLine("Handshake ongoing!");
+                    Task.Delay(20);
+                }
+
                 try
                 {
                     TcpClient tcp = repClient.Client;
