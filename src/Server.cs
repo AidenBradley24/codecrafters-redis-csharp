@@ -52,7 +52,7 @@ while (true)
 
 Task HandleClient(TcpClient client)
 {
-    Console.WriteLine($"NEW CLIENT!! {client.Client.RemoteEndPoint}");
+    Console.WriteLine($"Client handle started: {client.Client.RemoteEndPoint}");
     NetworkStream ns = client.GetStream();
     byte[] buffer = new byte[1024];
     while (client.Connected)
@@ -199,6 +199,7 @@ static string RandomAlphanum(int length)
 
 void StartReplica()
 {
+    Console.WriteLine($"Started handshake with {myMasterPort}");
     myMaster = new TcpClient(myMasterHostName, (int)myMasterPort);
     using NetworkStream ns = myMaster.GetStream();
     RedisWriter rw = new(ns);
@@ -213,6 +214,7 @@ void StartReplica()
             throw new Exception("not a pong!");
         }
     }
+    Console.WriteLine("1/4");
 
     rw.WriteStringArray(["REPLCONF", "listening-port", port.ToString()]);
     {
@@ -223,6 +225,7 @@ void StartReplica()
             throw new Exception("not ok!");
         }
     }
+    Console.WriteLine("2/4");
 
     rw.WriteStringArray(["REPLCONF", "capa", "eof", "capa", "psync2"]);
     {
@@ -233,6 +236,7 @@ void StartReplica()
             throw new Exception("not ok!");
         }
     }
+    Console.WriteLine("3/4");
 
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
@@ -240,6 +244,7 @@ void StartReplica()
         string response = rr.ReadSimpleString();
         // ignored response
     }
+    Console.WriteLine("4/4");
 
     _ = Task.Run(async () => await HandleClient(myMaster));
 }
