@@ -32,15 +32,15 @@ myInfo.Add("master_repl_offset", 0);
 
 HashSet<string> propagatedCommands = ["SET", "DEL"];
 
+TcpListener server = new(IPAddress.Any, port);
+server.Start();
+
 TcpClient? myMaster = null;
 if (myMasterPort != null && myMasterHostName != null)
 {
     StartReplica();
     return;
 }
-
-TcpListener server = new(IPAddress.Any, port);
-server.Start();
 
 while (true)
 {
@@ -265,7 +265,7 @@ class ReplicaClient
         get
         {
             if (existingClient?.Connected ?? false) return existingClient;
-            Console.WriteLine("replica not connected!\nattempting to reconnect...");
+            Console.WriteLine("replica not connected!\nattempting to reconnect...");  
             existingClient = new TcpClient(Hostname, Port);
             return existingClient;
         }
