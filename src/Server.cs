@@ -243,7 +243,6 @@ void StartReplica()
         string response = rr.ReadSimpleString();
         // ignored response
     }
-    rw.WriteSimpleString("OK");
 
     Console.WriteLine("handshake 4/4");
 
