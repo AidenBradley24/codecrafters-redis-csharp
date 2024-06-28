@@ -73,12 +73,6 @@ Task HandleClient(TcpClient client)
         }
         Console.WriteLine("(end of request)");
 
-        while (ongoingHandshake)
-        {
-            Console.WriteLine("Handshake ongoing!");
-            Task.Delay(20);
-        }
-
         string command = ((string)request[0]).ToUpperInvariant();
 
         if (propagatedCommands.Contains(command))
