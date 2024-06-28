@@ -82,6 +82,7 @@ Task HandleClient(TcpClient client)
                     NetworkStream masterConnection = tcp.GetStream();
                     RedisWriter writer = new(masterConnection);
                     writer.WriteArray(request);
+                    Console.WriteLine($"command replicated to {repClient.Port}");
                 }
                 catch (Exception ex)
                 {
