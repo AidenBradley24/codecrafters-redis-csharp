@@ -157,10 +157,9 @@ Task HandleClient(TcpClient client)
                 {
                     if (HasArgument("listening-port", 1))
                     {
-                        lock (myReplicas)
-                        {
-                            myReplicas.Add(new ReplicaClient() { Client = client, Hostname = "localhost", Port = Convert.ToInt32(request[2]) });
-                        }
+                        int port = Convert.ToInt32(request[2]);
+                        Console.WriteLine($"added client: {port}");
+                        myReplicas.Add(new ReplicaClient() { Client = client, Hostname = "localhost", Port = port });
                     }
 
                     rw.WriteSimpleString("OK");
