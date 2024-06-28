@@ -80,11 +80,11 @@ Task HandleClient(TcpClient client)
             {
                 try
                 {
-                    using TcpClient tcp = repClient.Client;
+                    TcpClient tcp = repClient.Client;
 
                     Console.WriteLine("AA2");
 
-                    using NetworkStream masterConnection = tcp.GetStream();
+                    NetworkStream masterConnection = tcp.GetStream();
                     Console.WriteLine("AA3");
 
                     RedisWriter writer = new(masterConnection);
@@ -94,8 +94,6 @@ Task HandleClient(TcpClient client)
                     writer.WriteArray(request);
 
                     Console.WriteLine("AA5");
-
-                    tcp.Close();
 
                 }
                 catch (Exception ex)
