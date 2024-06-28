@@ -204,13 +204,13 @@ void StartReplica()
 {
     Console.WriteLine($"Started handshake with {myMasterPort}");
     myMaster = new TcpClient(myMasterHostName, (int)myMasterPort);
-    using NetworkStream ns = myMaster.GetStream();
+    NetworkStream ns = myMaster.GetStream();
     RedisWriter rw = new(ns);
     byte[] buffer = new byte[1024];
 
     rw.WriteStringArray(["PING"]);
     {
-        using RedisReader rr = InitRead(ns, buffer);
+        RedisReader rr = InitRead(ns, buffer);
         string response = rr.ReadSimpleString();
         if (!response.Equals("PONG", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -221,7 +221,7 @@ void StartReplica()
 
     rw.WriteStringArray(["REPLCONF", "listening-port", port.ToString()]);
     {
-        using RedisReader rr = InitRead(ns, buffer);
+        RedisReader rr = InitRead(ns, buffer);
         string response = rr.ReadSimpleString();
         if (!response.Equals("OK", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -232,7 +232,7 @@ void StartReplica()
 
     rw.WriteStringArray(["REPLCONF", "capa", "eof", "capa", "psync2"]);
     {
-        using RedisReader rr = InitRead(ns, buffer);
+        RedisReader rr = InitRead(ns, buffer);
         string response = rr.ReadSimpleString();
         if (!response.Equals("OK", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -243,7 +243,7 @@ void StartReplica()
 
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
-        using RedisReader rr = InitRead(ns, buffer);
+        RedisReader rr = InitRead(ns, buffer);
         string response = rr.ReadSimpleString();
         // ignored response
         rw.WriteSimpleString("OK");
