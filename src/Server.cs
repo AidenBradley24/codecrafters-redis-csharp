@@ -35,6 +35,8 @@ HashSet<string> propagatedCommands = ["SET", "DEL", "INFO"];
 TcpListener server = new(IPAddress.Any, port);
 server.Start();
 
+Console.WriteLine($"Started server: {port}");
+
 TcpClient? myMaster = null;
 if (myMasterPort != null && myMasterHostName != null)
 {
