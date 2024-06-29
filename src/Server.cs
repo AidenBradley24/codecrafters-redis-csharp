@@ -239,7 +239,14 @@ void StartReplica()
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
         RedisReader rr = InitRead(ns, buffer);
-        string response = rr.ReadSimpleString();
+        object response = rr.ReadAny();
+        if (response is object[] array)
+        {
+            foreach (object o in array)
+            {
+                Console.WriteLine(o.ToString());
+            }
+        }
         // ignored response
     }
 
