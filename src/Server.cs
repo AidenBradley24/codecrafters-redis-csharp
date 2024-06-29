@@ -247,6 +247,10 @@ void StartReplica()
                 Console.WriteLine(o.ToString());
             }
         }
+        else
+        {
+            Console.WriteLine(response);
+        }
         // ignored response
     }
 
