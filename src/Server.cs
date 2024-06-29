@@ -94,7 +94,6 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
             Console.WriteLine("(end of request)");
 
             string command = ((string)request[0]).ToUpperInvariant();
-
             if (propagatedCommands.Contains(command))
             {
                 foreach (TcpClient repClient in myReplicas)
@@ -113,7 +112,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                 }
             }
 
-            RedisWriter rw = new(ns) { Enabled = !clientIsMaster };
+            RedisWriter rw = new(ns) { Enabled = !clientIsMaster || command == "REPLCONF" };
             switch (command)
             {
                 case "PING":
@@ -183,8 +182,13 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                             int port = Convert.ToInt32(request[2]);
                             Console.WriteLine($"adding client: {port}");
                         }
+                        
+                        if (clientIsMaster && HasArgument("GETACK", 1))
+                        {
+                            rw.WriteArray(["REPLCONF ACK 0"]);
+                        }
 
-                        rw.WriteSimpleString("OK");
+                        if (!clientIsMaster) rw.WriteSimpleString("OK");
                     }
                     break;
                 case "PSYNC":
