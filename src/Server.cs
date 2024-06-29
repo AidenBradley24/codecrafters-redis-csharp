@@ -207,6 +207,11 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     rw.WriteEmptyRDB(); // TODO write actual db
                     myReplicas.Add(client);
                     break;
+                case "WAIT":
+                    {
+                        rw.WriteInt(0);
+                    }
+                    break;
             }
 
             byteCounter += rr.GetByteCount();
