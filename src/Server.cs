@@ -118,7 +118,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         RedisWriter writer = new(masterConnection);
                         writer.WriteArray(request);
                         writer.Flush();
-                        Console.WriteLine($"command replicated to {repClient}");
+                        Console.WriteLine($"command replicated to {repClient.Client.RemoteEndPoint}");
                         Interlocked.Increment(ref propagatedCount);
                     }
                     catch (Exception ex)
