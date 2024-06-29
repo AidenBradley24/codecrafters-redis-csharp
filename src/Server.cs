@@ -241,18 +241,26 @@ void StartReplica()
 
         for (int i = 0; i < 10; i++)
         {
-            object response = rr.ReadAny();
-            if (response is object[] array)
+            try
             {
-                foreach (object o in array)
+                object response = rr.ReadAny();
+                if (response is object[] array)
                 {
-                    Console.WriteLine(o.ToString());
+                    foreach (object o in array)
+                    {
+                        Console.WriteLine(o.ToString());
+                    }
+                }
+                else
+                {
+                    Console.WriteLine(response);
                 }
             }
-            else
+            catch (Exception e)
             {
-                Console.WriteLine(response);
+                Console.WriteLine(e);
             }
+
         }
     }
 
