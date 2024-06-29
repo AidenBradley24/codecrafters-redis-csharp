@@ -238,33 +238,24 @@ void StartReplica()
         RedisReader rr = InitRead(ns, buffer);
 
         // recieving FULLRESYNC here
-        object response = rr.ReadAny();
-        if (response is object[] array)
-        {
-            foreach (object o in array)
-            {
-                Console.WriteLine(o.ToString());
-            }
-        }
-        else
-        {
-            Console.WriteLine(response);
-        }
 
-        // recieving something here?
-        response = rr.ReadAny();
-        if (response is object[] array2)
+        for (int i = 0; i < 10; i++)
         {
-            foreach (object o in array2)
+            object response = rr.ReadAny();
+            if (response is object[] array)
             {
-                Console.WriteLine(o.ToString());
+                foreach (object o in array)
+                {
+                    Console.WriteLine(o.ToString());
+                }
             }
-        }
-        else
-        {
-            Console.WriteLine(response);
+            else
+            {
+                Console.WriteLine(response);
+            }
         }
     }
+
 
     Console.WriteLine("handshake 4/4");
 
