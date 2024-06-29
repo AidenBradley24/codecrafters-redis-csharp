@@ -194,6 +194,7 @@ static RedisReader InitRead(NetworkStream ns, byte[] buffer)
 {
     Console.WriteLine("reading...");
     ns.Read(buffer);
+    Console.WriteLine("read complete");
     var ms = new MemoryStream(buffer);
     return new RedisReader(ms);
 }
