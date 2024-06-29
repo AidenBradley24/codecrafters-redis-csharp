@@ -13,6 +13,11 @@ namespace codecrafters_redis.src
             BaseStream.Write(Encoding.UTF8.GetBytes(value.ToString() ?? ""));
         }
 
+        public void Flush()
+        {
+            BaseStream.Flush();
+        }
+
         public void WriteSimpleString(string value)
         {
             if (value.Contains('\r') || value.Contains('\n'))
