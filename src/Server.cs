@@ -208,18 +208,6 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     break;
             }
         }
-
-
-        if (ns.DataAvailable)
-        {
-            Console.WriteLine("More data recived...");
-            rr = ReadNetwork(ns, buffer);
-            continue;
-        }
-        else
-        {
-            rr.Dispose();
-        }
     }
 
     Console.WriteLine($"closing connection: {client.Client.RemoteEndPoint}");
