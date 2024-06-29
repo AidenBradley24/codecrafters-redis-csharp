@@ -51,9 +51,16 @@ namespace codecrafters_redis.src
         public void ReadRDB()
         {
             // NOTE: currently only skips the stream over the database
-            BaseStream.Position++; // $
-            int length = int.Parse(ReadUntilCRLF());
-            BaseStream.Position += length;
+            try
+            {
+                BaseStream.Position++; // $
+                int length = int.Parse(ReadUntilCRLF());
+                BaseStream.Position += length;
+            }
+            catch (EndOfStreamException)
+            {
+                
+            }
         }
 
         public object ReadAny()
