@@ -67,7 +67,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
     return Task.CompletedTask;
 }
 
-void HandleRequest(object[] request, RedisWriter rw, TcpClient client)
+bool HandleRequest(object[] request, RedisWriter rw, TcpClient client)
 {
     bool HasArgument(string arg, int index)
     {
@@ -179,7 +179,10 @@ void HandleRequest(object[] request, RedisWriter rw, TcpClient client)
             rw.WriteEmptyRDB(); // TODO write actual db
             myReplicas.Add(client);
             break;
+        default:
+            return false;
     }
+    return true;
 }
 
 static RedisReader InitRead(NetworkStream ns, byte[] buffer)
@@ -244,6 +247,23 @@ void StartReplica()
     }
 
     Console.WriteLine("handshake 4/4");
+
+    while (true)
+    {
+        rw.Enabled = false;
+        RedisReader rr = InitRead(ns, buffer);
+        object response = rr.ReadAny();
+        if (response is object[] array)
+        {
+            bool c = HandleRequest(array, rw, myMaster);
+            if (c) continue;
+            break;
+        }
+        else
+        {
+            break;
+        }
+    }
 
     _ = Task.Run(async () => await HandleClient(myMaster, true));
 }
