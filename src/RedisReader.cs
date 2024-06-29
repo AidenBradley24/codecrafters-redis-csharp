@@ -69,6 +69,11 @@ namespace codecrafters_redis.src
             };
         }
 
+        public bool HasNext()
+        {
+            return br.PeekChar() != 0;
+        }
+
         private string ReadUntilCRLF()
         {
             List<char> chars = [];

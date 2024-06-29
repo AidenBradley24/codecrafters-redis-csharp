@@ -65,122 +65,125 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
             FinalizeHandshake(ref rr, ns, buffer);
             clientLaunched = true;
         }
+
         rr ??= ReadNetwork(ns, buffer);
-
-        object[] request = (object[])rr.ReadAny();
-
-        bool HasArgument(string arg, int index)
+        while (rr.HasNext())
         {
-            return request.Length > index && ((string)request[index]).Equals(arg, StringComparison.InvariantCultureIgnoreCase);
-        }
+            object[] request = rr.ReadArray();
 
-        Console.WriteLine($"recieved request:");
-        foreach (object obj in request)
-        {
-            Console.WriteLine(obj);
-        }
-        Console.WriteLine("(end of request)");
-
-        string command = ((string)request[0]).ToUpperInvariant();
-
-        if (propagatedCommands.Contains(command))
-        {
-            foreach (TcpClient repClient in myReplicas)
+            bool HasArgument(string arg, int index)
             {
-                try
+                return request.Length > index && ((string)request[index]).Equals(arg, StringComparison.InvariantCultureIgnoreCase);
+            }
+
+            Console.WriteLine($"recieved request:");
+            foreach (object obj in request)
+            {
+                Console.WriteLine(obj);
+            }
+            Console.WriteLine("(end of request)");
+
+            string command = ((string)request[0]).ToUpperInvariant();
+
+            if (propagatedCommands.Contains(command))
+            {
+                foreach (TcpClient repClient in myReplicas)
                 {
-                    NetworkStream masterConnection = repClient.GetStream();
-                    RedisWriter writer = new(masterConnection);
-                    writer.WriteArray(request);
-                    Console.WriteLine($"command replicated to {repClient}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
+                    try
+                    {
+                        NetworkStream masterConnection = repClient.GetStream();
+                        RedisWriter writer = new(masterConnection);
+                        writer.WriteArray(request);
+                        Console.WriteLine($"command replicated to {repClient}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.ToString());
+                    }
                 }
             }
-        }
 
-        RedisWriter rw = new(ns) { Enabled = !clientIsMaster };
-        switch (command)
-        {
-            case "PING":
-                rw.WriteSimpleString("PONG");
-                break;
-            case "ECHO":
-                rw.WriteBulkString((string)request[1]);
-                break;
-            case "GET":
-                {
-                    (string val, DateTime? timeout) dat;
-                    bool hasVal = false;
-                    lock (myCache)
+            RedisWriter rw = new(ns) { Enabled = !clientIsMaster };
+            switch (command)
+            {
+                case "PING":
+                    rw.WriteSimpleString("PONG");
+                    break;
+                case "ECHO":
+                    rw.WriteBulkString((string)request[1]);
+                    break;
+                case "GET":
                     {
-                        hasVal = myCache.TryGetValue((string)request[1], out dat);
-                    }
+                        (string val, DateTime? timeout) dat;
+                        bool hasVal = false;
+                        lock (myCache)
+                        {
+                            hasVal = myCache.TryGetValue((string)request[1], out dat);
+                        }
 
-                    if (!hasVal)
-                    {
-                        rw.WriteBulkString(null);
+                        if (!hasVal)
+                        {
+                            rw.WriteBulkString(null);
+                        }
+                        else if (dat.timeout != null && DateTime.Now >= dat.timeout)
+                        {
+                            myCache.Remove((string)request[1]);
+                            rw.WriteBulkString(null);
+                        }
+                        else
+                        {
+                            rw.WriteBulkString(dat.val);
+                        }
                     }
-                    else if(dat.timeout != null && DateTime.Now >= dat.timeout)
+                    break;
+                case "SET":
                     {
-                        myCache.Remove((string)request[1]);
-                        rw.WriteBulkString(null);
-                    }
-                    else
-                    {
-                        rw.WriteBulkString(dat.val);
-                    }
-                }
-                break;
-            case "SET":
-                {
-                    DateTime? timeout = null;
-                    if (HasArgument("px", 3))
-                    {
-                        int milliseconds = Convert.ToInt32(request[4]);
-                        timeout = DateTime.Now.AddMilliseconds(milliseconds);
-                    }
+                        DateTime? timeout = null;
+                        if (HasArgument("px", 3))
+                        {
+                            int milliseconds = Convert.ToInt32(request[4]);
+                            timeout = DateTime.Now.AddMilliseconds(milliseconds);
+                        }
 
-                    lock (myCache)
-                    {
-                        myCache[(string)request[1]] = ((string)request[2], timeout);
-                    }
+                        lock (myCache)
+                        {
+                            myCache[(string)request[1]] = ((string)request[2], timeout);
+                        }
 
-                    rw.WriteSimpleString("OK");
-                }
-                break;
-            case "INFO":
-                {
-                    StringBuilder sb = new();
-                    foreach(KeyValuePair<string, object> pair in myInfo)
-                    {
-                        sb.Append(pair.Key);
-                        sb.Append(':');
-                        sb.Append(pair.Value);
-                        sb.Append('\n');
+                        rw.WriteSimpleString("OK");
                     }
-                    rw.WriteBulkString(sb.ToString());
-                }
-                break;
-            case "REPLCONF":
-                {
-                    if (HasArgument("listening-port", 1))
+                    break;
+                case "INFO":
                     {
-                        int port = Convert.ToInt32(request[2]);
-                        Console.WriteLine($"adding client: {port}");
+                        StringBuilder sb = new();
+                        foreach (KeyValuePair<string, object> pair in myInfo)
+                        {
+                            sb.Append(pair.Key);
+                            sb.Append(':');
+                            sb.Append(pair.Value);
+                            sb.Append('\n');
+                        }
+                        rw.WriteBulkString(sb.ToString());
                     }
+                    break;
+                case "REPLCONF":
+                    {
+                        if (HasArgument("listening-port", 1))
+                        {
+                            int port = Convert.ToInt32(request[2]);
+                            Console.WriteLine($"adding client: {port}");
+                        }
 
-                    rw.WriteSimpleString("OK");
-                }
-                break;
-            case "PSYNC":
-                rw.WriteSimpleString($"FULLRESYNC {myInfo["master_replid"]} {myInfo["master_repl_offset"]}");
-                rw.WriteEmptyRDB(); // TODO write actual db
-                myReplicas.Add(client);
-                break;
-        }
+                        rw.WriteSimpleString("OK");
+                    }
+                    break;
+                case "PSYNC":
+                    rw.WriteSimpleString($"FULLRESYNC {myInfo["master_replid"]} {myInfo["master_repl_offset"]}");
+                    rw.WriteEmptyRDB(); // TODO write actual db
+                    myReplicas.Add(client);
+                    break;
+            }
+        }   
 
         rr.Dispose();
     }
