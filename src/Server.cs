@@ -170,9 +170,6 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                 rw.WriteEmptyRDB(); // TODO write actual db
                 myReplicas.Add(client);
                 break;
-            case "FULLRESYNC":
-                Console.WriteLine("resync");
-                break;
         }
     }
 
@@ -239,6 +236,8 @@ void StartReplica()
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
         RedisReader rr = InitRead(ns, buffer);
+
+        // recieving FULLRESYNC here
         object response = rr.ReadAny();
         if (response is object[] array)
         {
@@ -251,7 +250,20 @@ void StartReplica()
         {
             Console.WriteLine(response);
         }
-        // ignored response
+
+        // recieving something here?
+        response = rr.ReadAny();
+        if (response is object[] array2)
+        {
+            foreach (object o in array2)
+            {
+                Console.WriteLine(o.ToString());
+            }
+        }
+        else
+        {
+            Console.WriteLine(response);
+        }
     }
 
     Console.WriteLine("handshake 4/4");
