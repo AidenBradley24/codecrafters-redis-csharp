@@ -207,9 +207,19 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     myReplicas.Add(client);
                     break;
             }
-        }   
+        }
 
-        rr.Dispose();
+
+        if (ns.DataAvailable)
+        {
+            Console.WriteLine("More data recived...");
+            rr = ReadNetwork(ns, buffer);
+            continue;
+        }
+        else
+        {
+            rr.Dispose();
+        }
     }
 
     Console.WriteLine($"closing connection: {client.Client.RemoteEndPoint}");
