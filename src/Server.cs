@@ -255,6 +255,37 @@ void StartReplica()
         }
     }
 
+    {
+        RedisReader rr = InitRead(ns, buffer);
+        object response = rr.ReadAny();
+        if (response is object[] array)
+        {
+            foreach (object o in array)
+            {
+                Console.WriteLine(o.ToString());
+            }
+        }
+        else
+        {
+            Console.WriteLine(response);
+        }
+    }
+
+    {
+        RedisReader rr = InitRead(ns, buffer);
+        object response = rr.ReadAny();
+        if (response is object[] array)
+        {
+            foreach (object o in array)
+            {
+                Console.WriteLine(o.ToString());
+            }
+        }
+        else
+        {
+            Console.WriteLine(response);
+        }
+    }
 
     Console.WriteLine("handshake 4/4");
 
