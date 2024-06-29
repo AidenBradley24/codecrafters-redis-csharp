@@ -70,7 +70,16 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
         rr ??= ReadNetwork(ns, buffer);
         while (rr.HasNext())
         {
-            object[] request = rr.ReadArray();
+            object[] request;
+
+            try
+            {
+                request = rr.ReadArray();
+            }
+            catch
+            {
+                break;
+            }
 
             bool HasArgument(string arg, int index)
             {
