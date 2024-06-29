@@ -60,11 +60,10 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
     while (client.Connected)
     {
         RedisReader rr = InitRead(ns, buffer);
-        RedisWriter rw = new(ns) { Enabled = !clientIsMaster };
 
         if (!clientLaunched && clientIsMaster)
         {
-            FinalizeHandshake(ref rr, rw, ns, buffer);
+            FinalizeHandshake(ref rr, ns, buffer);
             clientLaunched = true;
         }
 
@@ -102,6 +101,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
             }
         }
 
+        RedisWriter rw = new(ns) { Enabled = !clientIsMaster };
         switch (command)
         {
             case "PING":
@@ -248,10 +248,11 @@ void StartReplica()
     _ = Task.Run(async () => await HandleClient(myMaster, true));
 }
 
-void FinalizeHandshake(ref RedisReader rr, RedisWriter rw, NetworkStream ns, byte[] buffer)
+void FinalizeHandshake(ref RedisReader rr, NetworkStream ns, byte[] buffer)
 {
     Console.WriteLine("finalizing handshake");
 
+    RedisWriter rw = new(ns);
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
         rr = InitRead(ns, buffer);
