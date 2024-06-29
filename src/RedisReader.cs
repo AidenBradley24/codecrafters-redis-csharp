@@ -48,18 +48,19 @@ namespace codecrafters_redis.src
             return array;
         }
 
-        public void ReadRDB()
+        public void SkipRDB()
         {
-            // NOTE: currently only skips the stream over the database
+            Console.WriteLine("SKIPPING RDB");
             try
             {
                 BaseStream.Position++; // $
                 int length = int.Parse(ReadUntilCRLF());
                 BaseStream.Position += length;
+                Console.WriteLine("SKIP COMPLETE");
             }
             catch (EndOfStreamException)
             {
-                
+                Console.WriteLine("SKIP RAN INTO ERROR");
             }
         }
 
