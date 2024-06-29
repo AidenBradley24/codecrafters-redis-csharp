@@ -209,7 +209,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     break;
                 case "WAIT":
                     {
-                        rw.WriteInt(0);
+                        rw.WriteInt(myReplicas.Count);
                     }
                     break;
             }
