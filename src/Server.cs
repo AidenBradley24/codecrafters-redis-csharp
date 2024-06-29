@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Collections.Concurrent;
-using System;
 
 int port = 6379;
 int? myMasterPort = null;
@@ -57,6 +56,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
 
     byte[] buffer = new byte[1024];
     bool clientLaunched = false;
+    long byteCounter = 0;
     while (client.Connected)
     {
         Console.WriteLine("Client is still connected");
@@ -80,6 +80,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
 
         while (rr.HasNext())
         {
+            rr.StartByteCount();
             object[] request;
 
             try
@@ -195,7 +196,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         
                         if (clientIsMaster && HasArgument("GETACK", 1))
                         {
-                            rw.WriteArray(["REPLCONF", "ACK", "0"]);
+                            rw.WriteArray(["REPLCONF", "ACK", byteCounter.ToString()]);
                         }
 
                         if (!clientIsMaster) rw.WriteSimpleString("OK");
@@ -207,6 +208,8 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     myReplicas.Add(client);
                     break;
             }
+
+            byteCounter += rr.GetByteCount();
         }
     }
 

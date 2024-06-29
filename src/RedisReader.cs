@@ -10,6 +10,17 @@ namespace codecrafters_redis.src
         public Stream BaseStream { get => br.BaseStream; }
         private readonly BinaryReader br = new(baseStream, Encoding.UTF8);
 
+        private long byteOffset = 0;
+        public void StartByteCount()
+        {
+            byteOffset = BaseStream.Position;
+        }
+
+        public long GetByteCount()
+        {
+            return BaseStream.Position - byteOffset;
+        }
+
         public string ReadSimpleString()
         {
             if (br.ReadChar() != '+') throw new Exception("Invalid simple string");
