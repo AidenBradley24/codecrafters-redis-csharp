@@ -185,7 +185,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         
                         if (clientIsMaster && HasArgument("GETACK", 1))
                         {
-                            rw.WriteArray(["REPLCONF ACK 0"]);
+                            rw.WriteArray(["REPLCONF", "ACK", "0"]);
                         }
 
                         if (!clientIsMaster) rw.WriteSimpleString("OK");
