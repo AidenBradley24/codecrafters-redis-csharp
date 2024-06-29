@@ -59,13 +59,22 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
     bool clientLaunched = false;
     while (client.Connected)
     {
-        RedisReader rr = InitRead(ns, buffer);
-
-        if (!clientLaunched && clientIsMaster)
+        RedisReader rr = null;
+        try
         {
-            FinalizeHandshake(ref rr, ns, buffer);
-            clientLaunched = true;
+            rr = InitRead(ns, buffer);
+            if (!clientLaunched && clientIsMaster)
+            {
+                FinalizeHandshake(ref rr, ns, buffer);
+                clientLaunched = true;
+            }
         }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+
+
 
         object[] request = (object[])rr.ReadAny();
 
