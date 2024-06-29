@@ -30,7 +30,9 @@ myInfo.Add("master_repl_offset", 0);
 
 ConcurrentBag<TcpClient> myReplicas = [];
 
-HashSet<string> propagatedCommands = ["SET", "DEL", "INFO"];
+
+HashSet<string> propagatedCommands = ["SET", "DEL"];
+int propagatedCount = 0;
 
 TcpListener server = new(IPAddress.Any, port);
 server.Start();
@@ -107,6 +109,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
             string command = ((string)request[0]).ToUpperInvariant();
             if (propagatedCommands.Contains(command))
             {
+                Interlocked.Exchange(ref propagatedCount, 0);
                 foreach (TcpClient repClient in myReplicas)
                 {
                     try
@@ -114,7 +117,9 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         NetworkStream masterConnection = repClient.GetStream();
                         RedisWriter writer = new(masterConnection);
                         writer.WriteArray(request);
+                        writer.Flush();
                         Console.WriteLine($"command replicated to {repClient}");
+                        Interlocked.Increment(ref propagatedCount);
                     }
                     catch (Exception ex)
                     {
@@ -209,7 +214,21 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     break;
                 case "WAIT":
                     {
-                        rw.WriteInt(myReplicas.Count);
+                        int threshold = Convert.ToInt32(request[1]);
+                        int timeout = Convert.ToInt32(request[2]);
+
+                        async Task waitTask()
+                        {
+                            using CancellationTokenSource cts = new();
+                            cts.CancelAfter(timeout);
+                            while (propagatedCount < threshold)
+                            {
+                                await Task.Delay(25);
+                            }
+                        }
+
+                        Task.Run(waitTask).Wait();
+                        rw.WriteInt(propagatedCount);
                     }
                     break;
             }
