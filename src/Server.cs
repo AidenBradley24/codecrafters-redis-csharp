@@ -236,31 +236,22 @@ void StartReplica()
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
         RedisReader rr = InitRead(ns, buffer);
-
         // recieving FULLRESYNC here
+    }
 
-        for (int i = 0; i < 10; i++)
+    {
+        RedisReader rr = InitRead(ns, buffer);
+        object response = rr.ReadAny();
+        if (response is object[] array)
         {
-            try
+            foreach (object o in array)
             {
-                object response = rr.ReadAny();
-                if (response is object[] array)
-                {
-                    foreach (object o in array)
-                    {
-                        Console.WriteLine(o.ToString());
-                    }
-                }
-                else
-                {
-                    Console.WriteLine(response);
-                }
+                Console.WriteLine(o.ToString());
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
+        }
+        else
+        {
+            Console.WriteLine(response);
         }
     }
 
