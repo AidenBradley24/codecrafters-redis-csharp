@@ -59,13 +59,13 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
     bool clientLaunched = false;
     while (client.Connected)
     {
-        RedisReader rr = InitRead(ns, buffer);
-
+        RedisReader? rr = null;
         if (!clientLaunched && clientIsMaster)
         {
             FinalizeHandshake(ref rr, ns, buffer);
             clientLaunched = true;
         }
+        rr ??= ReadNetwork(ns, buffer);
 
         object[] request = (object[])rr.ReadAny();
 
@@ -190,7 +190,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
     return Task.CompletedTask;
 }
 
-static RedisReader InitRead(NetworkStream ns, byte[] buffer)
+static RedisReader ReadNetwork(NetworkStream ns, byte[] buffer)
 {
     Console.WriteLine("reading...");
     ns.Read(buffer);
@@ -216,7 +216,7 @@ void StartReplica()
 
     rw.WriteStringArray(["PING"]);
     {
-        RedisReader rr = InitRead(ns, buffer);
+        RedisReader rr = ReadNetwork(ns, buffer);
         string response = rr.ReadSimpleString();
         if (!response.Equals("PONG", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -227,7 +227,7 @@ void StartReplica()
 
     rw.WriteStringArray(["REPLCONF", "listening-port", port.ToString()]);
     {
-        RedisReader rr = InitRead(ns, buffer);
+        RedisReader rr = ReadNetwork(ns, buffer);
         string response = rr.ReadSimpleString();
         if (!response.Equals("OK", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -238,7 +238,7 @@ void StartReplica()
 
     rw.WriteStringArray(["REPLCONF", "capa", "eof", "capa", "psync2"]);
     {
-        RedisReader rr = InitRead(ns, buffer);
+        RedisReader rr = ReadNetwork(ns, buffer);
         string response = rr.ReadSimpleString();
         if (!response.Equals("OK", StringComparison.InvariantCultureIgnoreCase))
         {
@@ -250,14 +250,15 @@ void StartReplica()
     _ = Task.Run(async () => await HandleClient(myMaster, true));
 }
 
-void FinalizeHandshake(ref RedisReader rr, NetworkStream ns, byte[] buffer)
+void FinalizeHandshake(ref RedisReader? rr, NetworkStream ns, byte[] buffer)
 {
     Console.WriteLine("finalizing handshake");
+    rr ??= ReadNetwork(ns, buffer);
 
     RedisWriter rw = new(ns);
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
-        rr = InitRead(ns, buffer);
+        rr = ReadNetwork(ns, buffer);
         rr.ReadAny(); // recieving FULLRESYNC here
         rr.ReadRDB();
     }
