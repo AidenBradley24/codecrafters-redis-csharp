@@ -288,6 +288,9 @@ void FinalizeHandshake(ref RedisReader? rr, NetworkStream ns, byte[] buffer)
         object o = rr.ReadAny(); // recieving FULLRESYNC here
         Console.WriteLine(o.GetType());
         Console.WriteLine(o);
+        o = rr.ReadAny();
+        Console.WriteLine(o.GetType());
+        Console.WriteLine(o);
         rr.ReadRDB();
     }
 
