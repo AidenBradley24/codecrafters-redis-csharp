@@ -285,7 +285,20 @@ void FinalizeHandshake(ref RedisReader? rr, NetworkStream ns, byte[] buffer)
         rw.Flush();
         Task.Delay(1000); // giving time to send all requests at once
         rr = ReadNetwork(ns, buffer);
-        rr.ReadAny(); // recieving FULLRESYNC here
+        object last = rr.ReadAny(); // recieving FULLRESYNC here
+        Console.WriteLine("final handshake message recieved:");
+        if (last is object[] ar)
+        {
+            foreach (object o in ar) 
+            {
+                Console.WriteLine(o.ToString());
+            }
+        }
+        else
+        {
+            Console.WriteLine(last);
+        }
+        Console.WriteLine("(end of final handshake message)");
         rr.SkipRDB();
     }
 
