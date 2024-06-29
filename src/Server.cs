@@ -86,7 +86,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                 return request.Length > index && ((string)request[index]).Equals(arg, StringComparison.InvariantCultureIgnoreCase);
             }
 
-            Console.WriteLine($"recieved request:");
+            Console.WriteLine($"recieved request from {(clientIsMaster ? "Master" : client.Client.RemoteEndPoint)}:");
             foreach (object obj in request)
             {
                 Console.WriteLine(obj);
