@@ -243,6 +243,7 @@ void StartReplica()
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
         RedisReader rr = InitRead(ns, buffer);
+        rr.ReadAny();
         // recieving FULLRESYNC here
     }
 
