@@ -4,14 +4,13 @@ namespace codecrafters_redis.src
 {
     internal class RedisWriter(Stream baseStream)
     {
-        private readonly Stream baseStream = baseStream;
-
+        public Stream BaseStream { get; } = baseStream;
         public bool Enabled { get; set; } = true;
         
         private void Write(object value)
         {
             if (!Enabled) return;
-            baseStream.Write(Encoding.UTF8.GetBytes(value.ToString() ?? ""));
+            BaseStream.Write(Encoding.UTF8.GetBytes(value.ToString() ?? ""));
         }
 
         public void WriteSimpleString(string value)
@@ -56,7 +55,7 @@ namespace codecrafters_redis.src
         {
             byte[] contents = Convert.FromBase64String("UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==");
             Write($"${contents.Length}\r\n");
-            baseStream.Write(contents);
+            BaseStream.Write(contents);
         }
 
         public void WriteInt(int value)

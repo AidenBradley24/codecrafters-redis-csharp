@@ -7,6 +7,7 @@ namespace codecrafters_redis.src
     /// </summary>
     internal class RedisReader(Stream baseStream) : IDisposable
     {
+        public Stream BaseStream { get => br.BaseStream; }
         private readonly BinaryReader br = new(baseStream, Encoding.UTF8);
 
         public string ReadSimpleString()
@@ -20,7 +21,7 @@ namespace codecrafters_redis.src
             if (br.ReadChar() != '$') throw new Exception("Invalid bulk string");
             int length = int.Parse(ReadUntilCRLF());
             string s = Encoding.UTF8.GetString(br.ReadBytes(length));
-            br.BaseStream.Position += 2; // skip \r\n
+            BaseStream.Position += 2; // skip \r\n
             return s;
         }
 
@@ -30,7 +31,7 @@ namespace codecrafters_redis.src
             char first = (char)br.PeekChar();
             if (first == '-' || first == '+')
             {
-                br.BaseStream.Position++;
+                BaseStream.Position++;
             }
             return int.Parse(ReadUntilCRLF()) * first == '-' ? -1 : 1;
         }
@@ -45,6 +46,14 @@ namespace codecrafters_redis.src
                 array[i] = ReadAny();
             }
             return array;
+        }
+
+        public void ReadRDB()
+        {
+            // NOTE: currently only skips the stream over the database
+            BaseStream.Position++; // $
+            int length = int.Parse(ReadUntilCRLF());
+            BaseStream.Position += length;
         }
 
         public object ReadAny()
@@ -67,7 +76,7 @@ namespace codecrafters_redis.src
             {
                 chars.Add(br.ReadChar());
             }
-            br.BaseStream.Position += 2; // skip \r\n
+            BaseStream.Position += 2; // skip \r\n
             return string.Concat(chars);
         }
 
