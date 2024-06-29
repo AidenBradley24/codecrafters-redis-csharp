@@ -193,11 +193,6 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
 static RedisReader InitRead(NetworkStream ns, byte[] buffer)
 {
     ns.Read(buffer);
-
-    Console.WriteLine("Reading stream: ");
-    Console.WriteLine(Encoding.UTF8.GetString(buffer));
-    Console.WriteLine("(end read stream)");
-
     var ms = new MemoryStream(buffer);
     return new RedisReader(ms);
 }
@@ -255,6 +250,8 @@ void StartReplica()
 
 void FinalizeHandshake(ref RedisReader rr, RedisWriter rw, NetworkStream ns, byte[] buffer)
 {
+    Console.WriteLine("finalizing handshake");
+
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
         rr = InitRead(ns, buffer);
