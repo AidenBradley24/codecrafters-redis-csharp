@@ -192,7 +192,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
 
 static RedisReader InitRead(NetworkStream ns, byte[] buffer)
 {
-    Console.WriteLine("reading...")
+    Console.WriteLine("reading...");
     ns.Read(buffer);
     var ms = new MemoryStream(buffer);
     return new RedisReader(ms);
