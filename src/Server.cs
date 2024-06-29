@@ -248,6 +248,7 @@ void StartReplica()
     }
 
     Console.WriteLine("handshake 4/4");
+    _ = Task.Run(async () => await HandleClient(myMaster, true));
 
     while (true)
     {
@@ -265,6 +266,4 @@ void StartReplica()
             break;
         }
     }
-
-    _ = Task.Run(async () => await HandleClient(myMaster, true));
 }
