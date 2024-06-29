@@ -54,7 +54,6 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
 {
     Console.WriteLine($"Client handle started: {client.Client.RemoteEndPoint}");
     NetworkStream ns = client.GetStream();
-    ns.ReadTimeout = 200;
 
     byte[] buffer = new byte[1024];
     bool clientLaunched = false;
