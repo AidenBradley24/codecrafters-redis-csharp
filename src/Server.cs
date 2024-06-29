@@ -285,7 +285,7 @@ void FinalizeHandshake(ref RedisReader? rr, NetworkStream ns, byte[] buffer)
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
         rr = ReadNetwork(ns, buffer);
-        rr.ReadAny(); // recieving FULLRESYNC here
+        rr.ReadArray(); // recieving FULLRESYNC here
         rr.ReadRDB();
     }
 
