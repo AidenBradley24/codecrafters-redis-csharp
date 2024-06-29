@@ -53,28 +53,27 @@ while (true)
 Task HandleClient(TcpClient client, bool clientIsMaster)
 {
     Console.WriteLine($"Client handle started: {client.Client.RemoteEndPoint}");
-    NetworkStream ns = client.GetStream();
+    NetworkStream ns = null;
+    try
+    {
+        ns = client.GetStream();
+    }
+    catch (Exception e)
+    {
+        Console.WriteLine(e);
+    }
 
     byte[] buffer = new byte[1024];
     bool clientLaunched = false;
     while (client.Connected)
     {
-        RedisReader rr = null;
-        try
-        {
-            rr = InitRead(ns, buffer);
-            if (!clientLaunched && clientIsMaster)
-            {
-                FinalizeHandshake(ref rr, ns, buffer);
-                clientLaunched = true;
-            }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
+        RedisReader rr = InitRead(ns, buffer);
 
-
+        if (!clientLaunched && clientIsMaster)
+        {
+            FinalizeHandshake(ref rr, ns, buffer);
+            clientLaunched = true;
+        }
 
         object[] request = (object[])rr.ReadAny();
 
