@@ -253,7 +253,6 @@ void StartReplica()
 void FinalizeHandshake(ref RedisReader? rr, NetworkStream ns, byte[] buffer)
 {
     Console.WriteLine("finalizing handshake");
-    rr ??= ReadNetwork(ns, buffer);
 
     RedisWriter rw = new(ns);
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
