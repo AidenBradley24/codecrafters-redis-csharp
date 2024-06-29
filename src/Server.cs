@@ -59,6 +59,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
     bool clientLaunched = false;
     while (client.Connected)
     {
+        Console.WriteLine("Client is still connected");
         RedisReader? rr = null;
         if (!clientLaunched && clientIsMaster)
         {
