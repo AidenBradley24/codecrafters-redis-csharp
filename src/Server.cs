@@ -283,7 +283,7 @@ void FinalizeHandshake(ref RedisReader? rr, NetworkStream ns, byte[] buffer)
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
         rw.Flush();
-        Task.Delay(1000); // giving time to send all requests at once
+        Thread.Sleep(200); // giving time to send all requests at once
         rr = ReadNetwork(ns, buffer);
         object last = rr.ReadAny(); // recieving FULLRESYNC here
         Console.WriteLine("final handshake message recieved:");
