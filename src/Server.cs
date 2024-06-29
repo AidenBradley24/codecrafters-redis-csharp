@@ -41,16 +41,15 @@ TcpClient? myMaster = null;
 if (myMasterPort != null && myMasterHostName != null)
 {
     StartReplica();
-    return;
 }
 
 while (true)
 {
     TcpClient client = server.AcceptTcpClient();
-    _ = Task.Run(async () => await HandleClient(client));
+    _ = Task.Run(async () => await HandleClient(client, false));
 }
 
-Task HandleClient(TcpClient client)
+Task HandleClient(TcpClient client, bool clientIsMaster)
 {
     Console.WriteLine($"Client handle started: {client.Client.RemoteEndPoint}");
     NetworkStream ns = client.GetStream();
@@ -92,7 +91,7 @@ Task HandleClient(TcpClient client)
             }
         }
 
-        RedisWriter rw = new(ns) { Enabled = (string)myInfo["role"] != "slave" };
+        RedisWriter rw = new(ns) { Enabled = !clientIsMaster };
         switch (command)
         {
             case "PING":
@@ -246,5 +245,5 @@ void StartReplica()
 
     Console.WriteLine("handshake 4/4");
 
-    _ = Task.Run(async () => await HandleClient(myMaster));
+    _ = Task.Run(async () => await HandleClient(myMaster, true));
 }
