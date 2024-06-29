@@ -61,13 +61,23 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
     {
         Console.WriteLine("Client is still connected");
         RedisReader? rr = null;
-        if (!clientLaunched && clientIsMaster)
+
+        try
         {
-            FinalizeHandshake(ref rr, ns, buffer);
-            clientLaunched = true;
+            if (!clientLaunched && clientIsMaster)
+            {
+                FinalizeHandshake(ref rr, ns, buffer);
+                clientLaunched = true;
+            }
+
+            rr ??= ReadNetwork(ns, buffer);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
         }
 
-        rr ??= ReadNetwork(ns, buffer);
         while (rr.HasNext())
         {
             object[] request;
