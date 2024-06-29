@@ -50,16 +50,23 @@ while (true)
     _ = Task.Run(async () => await HandleClient(client, false));
 }
 
-Task HandleClient(TcpClient client, bool clientIsMaster, Action<NetworkStream, byte[]>? handleOnLaunch = null)
+Task HandleClient(TcpClient client, bool clientIsMaster, Action<RedisReader, RedisWriter>? handleOnLaunch = null)
 {
     Console.WriteLine($"Client handle started: {client.Client.RemoteEndPoint}");
     NetworkStream ns = client.GetStream();
 
     byte[] buffer = new byte[1024];
-    handleOnLaunch?.Invoke(ns, buffer);
     while (client.Connected)
     {
         using RedisReader rr = InitRead(ns, buffer);
+        RedisWriter rw = new(ns) { Enabled = !clientIsMaster };
+
+        if (handleOnLaunch != null)
+        {
+            handleOnLaunch.Invoke(rr, rw);
+            handleOnLaunch = null;
+        }
+
         object[] request = (object[])rr.ReadAny();
 
         bool HasArgument(string arg, int index)
@@ -94,7 +101,6 @@ Task HandleClient(TcpClient client, bool clientIsMaster, Action<NetworkStream, b
             }
         }
 
-        RedisWriter rw = new(ns) { Enabled = !clientIsMaster };
         switch (command)
         {
             case "PING":
@@ -184,6 +190,11 @@ Task HandleClient(TcpClient client, bool clientIsMaster, Action<NetworkStream, b
 static RedisReader InitRead(NetworkStream ns, byte[] buffer)
 {
     ns.Read(buffer);
+
+    Console.WriteLine("Reading stream: ");
+    Console.WriteLine(Encoding.UTF8.GetString(buffer));
+    Console.WriteLine("(end read stream)");
+
     var ms = new MemoryStream(buffer);
     return new RedisReader(ms);
 }
@@ -239,12 +250,10 @@ void StartReplica()
     _ = Task.Run(async () => await HandleClient(myMaster, true, FinalizeHandshake));
 }
 
-void FinalizeHandshake(NetworkStream ns, byte[] buffer)
+void FinalizeHandshake(RedisReader rr, RedisWriter rw)
 {
-    RedisWriter rw = new(ns);
     rw.WriteStringArray(["PSYNC", "?", "-1"]);
     {
-        RedisReader rr = InitRead(ns, buffer);
         // recieving FULLRESYNC here
     }
 
