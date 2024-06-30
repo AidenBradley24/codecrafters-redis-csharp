@@ -267,6 +267,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         Task<int> runningTask = WaitTask();
                         runningTask.Wait();
                         rw.WriteInt(runningTask.Result);
+                        Console.WriteLine($"WAIT has ended... Result: {runningTask.Result}");
                     }
                     break;
             }
