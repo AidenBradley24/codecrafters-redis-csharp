@@ -232,6 +232,12 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     break;
                 case "WAIT":
                     {
+                        if (replicaSentOffset == 0)
+                        {
+                            rw.WriteInt(myReplicas.Count);
+                            break;
+                        }
+
                         int threshold = Convert.ToInt32(request[1]);
                         int timeout = Convert.ToInt32(request[2]);
 
