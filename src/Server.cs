@@ -249,6 +249,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                             int count = 0;
                             while (count < threshold && !cts.IsCancellationRequested)
                             {
+                                count = 0;
                                 foreach (ReplicaClient repClient in myReplicas)
                                 {
                                     var ns = repClient.Client.GetStream();
