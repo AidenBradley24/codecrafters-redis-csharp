@@ -221,8 +221,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                                 Console.WriteLine("Could not find client when using ACK");
                             }
                         }
-
-                        if (!clientIsMaster) rw.WriteSimpleString("OK");
+                        else if (!clientIsMaster) rw.WriteSimpleString("OK");
                     }
                     break;
                 case "PSYNC":
