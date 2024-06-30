@@ -82,20 +82,24 @@ namespace codecrafters_redis.src
             Write("\r\n");
         }
 
-        public void WriteArray(object[] array)
+        public void WriteArray(object?[] array)
         {
             Write("*");
             Write(array.Length.ToString());
             Write("\r\n");
-            foreach (object o in array)
+            foreach (object? o in array)
             {
                 WriteAny(o);
             }
         }
 
-        public void WriteAny(object value)
+        public void WriteAny(object? value)
         {
-            if (value is object[] array)
+            if(value == null)
+            {
+                WriteBulkString(null);
+            }
+            else if (value is object[] array)
             {
                 WriteArray(array);
             }

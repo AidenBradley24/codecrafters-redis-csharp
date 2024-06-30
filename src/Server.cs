@@ -7,6 +7,8 @@ using System.Collections.Concurrent;
 int port = 6379;
 int? myMasterPort = null;
 string? myMasterHostName = null;
+string? myDir = null;
+string? myDbFileName = null;
 for (int i = 0; i < args.Length; i++)
 {
     if (args[i] == "--port")
@@ -18,7 +20,15 @@ for (int i = 0; i < args.Length; i++)
         string m = args[++i];
         int last = m.LastIndexOf(' ');
         myMasterHostName = m[..last];
-        myMasterPort = Convert.ToInt32(m[(last+1)..]);
+        myMasterPort = Convert.ToInt32(m[(last + 1)..]);
+    }
+    else if (args[i] == "--dir")
+    {
+        myDir = args[++i];
+    }
+    else if (args[i] == "--dbfilename")
+    {
+        myDbFileName = args[++i];
     }
 }
 
@@ -275,6 +285,20 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         rw.WriteInt(runningTask.Result);
                         Console.WriteLine($"WAIT has ended... Result: {runningTask.Result}");
                     }
+                    break;
+                case "CONFIG":
+                    if (HasArgument("GET", 1))
+                    {
+                        if (HasArgument("dir", 2))
+                        {
+                            rw.WriteArray(["dir", myDir]);
+                        }
+                        else if (HasArgument("dbfilename", 2))
+                        {
+                            rw.WriteArray(["dbfilename", myDbFileName]);
+                        }
+                    }
+
                     break;
             }
 
