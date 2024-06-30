@@ -28,11 +28,10 @@ myInfo.Add("role", myMasterPort == null ? "master" : "slave");
 myInfo.Add("master_replid", RandomAlphanum(40));
 myInfo.Add("master_repl_offset", 0);
 
-ConcurrentBag<TcpClient> myReplicas = [];
-
+ConcurrentBag<ReplicaClient> myReplicas = [];
+long replicaSentOffset = 0;
 
 HashSet<string> propagatedCommands = ["SET", "DEL"];
-int propagatedCount = 0;
 
 TcpListener server = new(IPAddress.Any, port);
 server.Start();
@@ -109,17 +108,21 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
             string command = ((string)request[0]).ToUpperInvariant();
             if (propagatedCommands.Contains(command))
             {
-                Interlocked.Exchange(ref propagatedCount, 0);
-                foreach (TcpClient repClient in myReplicas)
+                MemoryStream toCopy = new();
+                RedisWriter writer = new(toCopy);
+                writer.StartByteCount();
+                writer.WriteArray(request);
+                Interlocked.Add(ref replicaSentOffset, writer.GetByteCount());
+                writer.Flush();
+
+                foreach (ReplicaClient repClient in myReplicas)
                 {
                     try
                     {
-                        NetworkStream masterConnection = repClient.GetStream();
-                        RedisWriter writer = new(masterConnection);
-                        writer.WriteArray(request);
-                        writer.Flush();
-                        Console.WriteLine($"command replicated to {repClient.Client.RemoteEndPoint}");
-                        Interlocked.Increment(ref propagatedCount);
+                        NetworkStream masterConnection = repClient.Client.GetStream();
+                        toCopy.Position = 0;
+                        toCopy.CopyTo(masterConnection);
+                        Console.WriteLine($"command replicated to {repClient.Client.Client.RemoteEndPoint}");
                     }
                     catch (Exception ex)
                     {
@@ -203,6 +206,21 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         {
                             rw.WriteArray(["REPLCONF", "ACK", byteCounter.ToString()]);
                         }
+                        else if (HasArgument("ACK", 1))
+                        {
+                            ReplicaClient? repClient = myReplicas.Where(r => r.Client == client).FirstOrDefault();
+                            if (repClient != null)
+                            {
+                                lock (repClient)
+                                {
+                                    repClient.Offset = Convert.ToInt32(request[2]);
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine("Could not find client when using ACK");
+                            }
+                        }
 
                         if (!clientIsMaster) rw.WriteSimpleString("OK");
                     }
@@ -210,25 +228,45 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                 case "PSYNC":
                     rw.WriteSimpleString($"FULLRESYNC {myInfo["master_replid"]} {myInfo["master_repl_offset"]}");
                     rw.WriteEmptyRDB(); // TODO write actual db
-                    myReplicas.Add(client);
+                    myReplicas.Add(new ReplicaClient(client));
                     break;
                 case "WAIT":
                     {
                         int threshold = Convert.ToInt32(request[1]);
                         int timeout = Convert.ToInt32(request[2]);
 
-                        async Task waitTask()
+                        async Task<int> WaitTask()
                         {
                             using CancellationTokenSource cts = new();
                             cts.CancelAfter(timeout);
-                            while (propagatedCount < threshold)
+
+                            int count = 0;
+                            while (count < threshold && !cts.IsCancellationRequested)
                             {
-                                await Task.Delay(25);
-                            }
+                                foreach (ReplicaClient repClient in myReplicas)
+                                {
+                                    var ns = repClient.Client.GetStream();
+                                    var rw = new RedisWriter(ns);
+                                    rw.WriteStringArray(["REPLCONF", "GETACK", "*"]);
+                                }
+
+                                await Task.Delay(50);
+
+                                foreach (ReplicaClient repClient in myReplicas)
+                                {
+                                    lock (repClient)
+                                    {
+                                        if (repClient.Offset >= replicaSentOffset)
+                                            count++;
+                                    }
+                                }
+                            }  
+                            return count;
                         }
 
-                        Task.Run(waitTask).Wait();
-                        rw.WriteInt(propagatedCount);
+                        Task<int> runningTask = WaitTask();
+                        runningTask.Wait();
+                        rw.WriteInt(runningTask.Result);
                     }
                     break;
             }
@@ -330,4 +368,10 @@ void FinalizeHandshake(ref RedisReader? rr, NetworkStream ns, byte[] buffer)
     }
 
     Console.WriteLine("handshake 4/4");
+}
+
+class ReplicaClient(TcpClient client)
+{
+    public TcpClient Client { get; } = client;
+    public long Offset { get; set; }
 }

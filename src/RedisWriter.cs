@@ -6,7 +6,18 @@ namespace codecrafters_redis.src
     {
         public Stream BaseStream { get; } = baseStream;
         public bool Enabled { get; set; } = true;
-        
+
+        private long byteOffset = 0;
+        public void StartByteCount()
+        {
+            byteOffset = BaseStream.Position;
+        }
+
+        public long GetByteCount()
+        {
+            return BaseStream.Position - byteOffset;
+        }
+
         private void Write(object value)
         {
             if (!Enabled) return;
