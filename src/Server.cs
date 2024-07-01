@@ -44,7 +44,7 @@ myInfo.Add("master_repl_offset", 0);
 ConcurrentBag<ReplicaClient> myReplicas = [];
 long replicaSentOffset = 0;
 
-HashSet<string> propagatedCommands = ["SET", "DEL"];
+HashSet<string> WRITE_COMMANDS = ["SET", "DEL", "INCR"];
 
 Queue<object[]>? transaction = null;
 object transactionLck = new();
@@ -138,7 +138,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     transaction = null;
                 }
             }
-            else
+            else if (WRITE_COMMANDS.Contains(command))
             {
                 lock (transactionLck)
                 {
@@ -151,7 +151,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                 }
             }
 
-            if (propagatedCommands.Contains(command))
+            if (WRITE_COMMANDS.Contains(command))
             {
                 MemoryStream toCopy = new();
                 RedisWriter writer = new(toCopy);
