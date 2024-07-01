@@ -306,10 +306,9 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         try
                         {
                             string pattern = Convert.ToString(request[1])!;
-                            var dict = myDb!.GetDictionary();
                             IEnumerable<string> output = pattern switch
                             {
-                                "*" => dict.Keys,
+                                "*" => myCache.Keys,
                                 _ => throw new NotImplementedException()
                             };
                             rw.WriteStringArray(output.ToArray());
