@@ -121,18 +121,22 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
             }
             Console.WriteLine("(end of request)");
 
-            lock (transactionLck)
+            string command = ((string)request[0]).ToUpperInvariant();
+
+            if (command != "EXEC")
             {
-                if (transaction != null)
+                lock (transactionLck)
                 {
-                    RedisWriter writer = new(ns);
-                    transaction.Enqueue(request);
-                    writer.WriteSimpleString("QUEUED");
-                    continue;
+                    if (transaction != null)
+                    {
+                        RedisWriter writer = new(ns);
+                        transaction.Enqueue(request);
+                        writer.WriteSimpleString("QUEUED");
+                        continue;
+                    }
                 }
             }
 
-            string command = ((string)request[0]).ToUpperInvariant();
             if (propagatedCommands.Contains(command))
             {
                 MemoryStream toCopy = new();
