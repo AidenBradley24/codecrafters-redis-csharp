@@ -368,6 +368,16 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         rw.WriteSimpleString("OK");
                     }
                     break;
+                case "EXEC":
+                    lock (transactionLck)
+                    {
+                        if (transaction == null)
+                        {
+                            rw.WriteSimpleError("ERR EXEC without MULTI");
+                            break;
+                        }
+                    }
+                    break;
             }
 
             byteCounter += rr.GetByteCount();
