@@ -135,8 +135,9 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     ms.Write(Encoding.UTF8.GetBytes($"*{transaction.Count}\r\n"));
                     while (transaction.TryDequeue(out object[]? storedRequest))
                     {
-                        ExecuteRequest(storedRequest, transactionWriter, client, ref byteCounter, clientIsMaster);
+                        ExecuteRequest(storedRequest, transactionWriter, client, ref byteCounter, false);
                     }
+                    ms.Position = 0;
                     ms.CopyTo(ns);
                     transaction = null;
                 }
