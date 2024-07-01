@@ -325,7 +325,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     lock (myCache)
                     {
                         var dat = myCache[(string)request[1]];
-                        val = dat.val as int? ?? 0;
+                        val = Convert.ToInt32(dat.val);
                         val++;
                         myCache[(string)request[1]] = (val, dat.timeout);
                     }
