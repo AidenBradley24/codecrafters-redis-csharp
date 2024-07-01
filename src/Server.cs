@@ -34,7 +34,7 @@ for (int i = 0; i < args.Length; i++)
 FileInfo? myDbFile = myDir != null && myDbFileName != null ? new(Path.Combine(myDir, myDbFileName)) : null;
 RDBFile? myDb = myDbFile != null ? new RDBFile(myDbFile) : null;
 
-Dictionary<string, (string val, DateTime? timeout)> myCache = [];
+Dictionary<string, (object val, DateTime? timeout)> myCache = myDb?.GetDictionary() ?? [];
 Dictionary<string, object> myInfo = []; 
 myInfo.Add("role", myMasterPort == null ? "master" : "slave");
 myInfo.Add("master_replid", RandomAlphanum(40));
@@ -154,7 +154,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     break;
                 case "GET":
                     {
-                        (string val, DateTime? timeout) dat;
+                        (object val, DateTime? timeout) dat;
                         bool hasVal = false;
                         lock (myCache)
                         {
@@ -172,7 +172,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         }
                         else
                         {
-                            rw.WriteBulkString(dat.val);
+                            rw.WriteAny(dat.val);
                         }
                     }
                     break;
