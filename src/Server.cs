@@ -135,6 +135,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         byteCounter += rr.GetByteCount();
                         break;
                     }
+                    clientMutex.WaitOne();
 
                     MemoryStream ms = new();
                     RedisWriter transactionWriter = new(ms);
@@ -414,7 +415,6 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
                     rw.WriteSimpleError("ERR ongoing transaction");
                     break;
                 }
-                clientMutex.WaitOne();
                 transaction = new Queue<object[]>();
                 transactionClient = client;
                 rw.WriteSimpleString("OK");
