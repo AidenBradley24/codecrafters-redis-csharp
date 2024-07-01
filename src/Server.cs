@@ -144,7 +144,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                 byteCounter += rr.GetByteCount();
                 break;
             }
-            else if (WRITE_COMMANDS.Contains(command))
+            else
             {
                 lock (transactionLck)
                 {
