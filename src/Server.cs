@@ -320,6 +320,17 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         }
                     }
                     break;
+                case "INCR":
+                    int val;
+                    lock (myCache)
+                    {
+                        var dat = myCache[(string)request[1]];
+                        val = dat.val as int? ?? 0;
+                        val++;
+                        myCache[(string)request[1]] = (val, dat.timeout);
+                    }
+                    rw.WriteInt(val);
+                    break;
             }
 
             byteCounter += rr.GetByteCount();
