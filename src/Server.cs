@@ -31,6 +31,8 @@ for (int i = 0; i < args.Length; i++)
         myDbFileName = args[++i];
     }
 }
+FileInfo? myDbFile = myDir != null && myDbFileName != null ? new(Path.Combine(myDir, myDbFileName)) : null;
+RDBFile? myDb = myDbFile != null ? new RDBFile(myDbFile) : null;
 
 Dictionary<string, (string val, DateTime? timeout)> myCache = [];
 Dictionary<string, object> myInfo = []; 
@@ -298,7 +300,18 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                             rw.WriteArray(["dbfilename", myDbFileName]);
                         }
                     }
-
+                    break;
+                case "KEYS":
+                    {
+                        string pattern = Convert.ToString(request[1])!;
+                        var dict = myDb!.GetDictionary();
+                        IEnumerable<string> output = pattern switch
+                        {
+                            "*" => dict.Keys,
+                            _ => throw new NotImplementedException()
+                        };
+                        rw.WriteStringArray(output.ToArray());
+                    }
                     break;
             }
 
