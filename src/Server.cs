@@ -303,14 +303,22 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     break;
                 case "KEYS":
                     {
-                        string pattern = Convert.ToString(request[1])!;
-                        var dict = myDb!.GetDictionary();
-                        IEnumerable<string> output = pattern switch
+                        try
                         {
-                            "*" => dict.Keys,
-                            _ => throw new NotImplementedException()
-                        };
-                        rw.WriteStringArray(output.ToArray());
+                            string pattern = Convert.ToString(request[1])!;
+                            var dict = myDb!.GetDictionary();
+                            IEnumerable<string> output = pattern switch
+                            {
+                                "*" => dict.Keys,
+                                _ => throw new NotImplementedException()
+                            };
+                            rw.WriteStringArray(output.ToArray());
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex);
+                            throw;
+                        }
                     }
                     break;
             }
