@@ -376,6 +376,8 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                             rw.WriteSimpleError("ERR EXEC without MULTI");
                             break;
                         }
+
+                        rw.WriteArray([]);
                     }
                     break;
             }
