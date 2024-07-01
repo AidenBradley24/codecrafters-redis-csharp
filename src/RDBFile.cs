@@ -14,12 +14,12 @@ namespace codecrafters_redis.src
             return new BinaryReader(fs);
         }
 
-        private static void SeekToByte(Stream stream, byte check)
+        private static void SeekToByte(BinaryReader br, byte check)
         {
-            byte current = 0;
+            byte current;
             do
             {
-                stream.ReadByte();
+                current = br.ReadByte();
             } while (current != check);
         }
 
@@ -98,10 +98,10 @@ namespace codecrafters_redis.src
 
             var br = StartRead();
             Console.WriteLine("1");
-            SeekToByte(br.BaseStream, 0xFE);
+            SeekToByte(br, 0xFE);
             Console.WriteLine("2");
 
-            SeekToByte(br.BaseStream, 0xFB);
+            SeekToByte(br, 0xFB);
             Console.WriteLine("3");
 
             int keyValueSize = Convert.ToInt32(ReadSizeEncodedValue(br));
