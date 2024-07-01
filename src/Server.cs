@@ -122,16 +122,30 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
             Console.WriteLine("(end of request)");
 
             string command = ((string)request[0]).ToUpperInvariant();
+            RedisWriter rw = new(ns) { Enabled = !clientIsMaster || command == "REPLCONF" };
 
-            if (command != "EXEC")
+            if (command == "EXEC")
+            {
+                lock (transactionLck)
+                {
+                    if (transaction == null)
+                    {
+                        rw.WriteSimpleError("ERR EXEC without MULTI");
+                        break;
+                    }
+
+                    rw.WriteArray([]);
+                    transaction = null;
+                }
+            }
+            else
             {
                 lock (transactionLck)
                 {
                     if (transaction != null)
                     {
-                        RedisWriter writer = new(ns);
                         transaction.Enqueue(request);
-                        writer.WriteSimpleString("QUEUED");
+                        rw.WriteSimpleString("QUEUED");
                         continue;
                     }
                 }
@@ -162,7 +176,6 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                 }
             }
 
-            RedisWriter rw = new(ns) { Enabled = !clientIsMaster || command == "REPLCONF" };
             switch (command)
             {
                 case "PING":
@@ -370,18 +383,6 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         }
                         transaction = new Queue<object[]>();
                         rw.WriteSimpleString("OK");
-                    }
-                    break;
-                case "EXEC":
-                    lock (transactionLck)
-                    {
-                        if (transaction == null)
-                        {
-                            rw.WriteSimpleError("ERR EXEC without MULTI");
-                            break;
-                        }
-
-                        rw.WriteArray([]);
                     }
                     break;
             }
