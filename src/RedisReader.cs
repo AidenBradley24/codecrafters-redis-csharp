@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace codecrafters_redis.src
+namespace RedisComponents
 {
     /// <summary>
     /// Note: base stream must support seeking (no network stream allowed!)

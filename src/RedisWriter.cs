@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace codecrafters_redis.src
+namespace RedisComponents
 {
     internal class RedisWriter(Stream baseStream)
     {

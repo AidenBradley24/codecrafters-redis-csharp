@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace codecrafters_redis.src
+namespace RedisComponents
 {
     internal class RDBFile(FileInfo file)
     {
@@ -96,7 +96,18 @@ namespace codecrafters_redis.src
             if (cache != null) return cache;
             Console.WriteLine("Reading RDB...");
 
-            var br = StartRead();
+            BinaryReader br;
+            try
+            {
+                br = StartRead();
+            }
+            catch (FileNotFoundException)
+            {
+                // tread db as empty
+                cache = [];
+                return cache;
+            }
+
             Console.WriteLine("1");
             SeekToByte(br, 0xFE);
             Console.WriteLine("2");
