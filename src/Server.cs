@@ -210,6 +210,7 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
     }
 
     string command = ((string)request[0]).ToUpperInvariant();
+    Console.WriteLine($"Executing command: '{string.Join(' ', request)}'");
     switch (command)
     {
         case "PING":
