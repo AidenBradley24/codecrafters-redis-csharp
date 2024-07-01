@@ -47,7 +47,9 @@ long replicaSentOffset = 0;
 HashSet<string> WRITE_COMMANDS = ["SET", "DEL", "INCR"];
 
 Queue<object[]>? transaction = null;
+TcpClient? transactionClient = null;
 object transactionLck = new();
+Mutex clientMutex = new(false);
 
 TcpListener server = new(IPAddress.Any, port);
 server.Start();
@@ -76,6 +78,8 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
     long byteCounter = 0;
     while (client.Connected)
     {
+        WaitForReadyToSeeClient(client);
+
         Console.WriteLine("Client is still connected");
         RedisReader? rr = null;
 
@@ -97,6 +101,8 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
 
         while (rr.HasNext())
         {
+            WaitForReadyToSeeClient(client);
+
             rr.StartByteCount();
             object[] request;
 
@@ -140,6 +146,8 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     ms.Position = 0;
                     ms.CopyTo(ns);
                     transaction = null;
+                    transactionClient = null;
+                    clientMutex.ReleaseMutex();
                 }
                 byteCounter += rr.GetByteCount();
                 break;
@@ -406,10 +414,26 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
                     rw.WriteSimpleError("ERR ongoing transaction");
                     break;
                 }
+                clientMutex.WaitOne();
                 transaction = new Queue<object[]>();
+                transactionClient = client;
                 rw.WriteSimpleString("OK");
             }
             break;
+    }
+}
+
+void WaitForReadyToSeeClient(TcpClient client)
+{
+    bool check;
+    lock (transactionLck)
+    {
+        check = transactionClient != null && transactionClient != client;
+    }
+
+    if (check)
+    {
+        clientMutex.WaitOne();
     }
 }
 
