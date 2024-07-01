@@ -109,11 +109,6 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                 break;
             }
 
-            bool HasArgument(string arg, int index)
-            {
-                return request.Length > index && ((string)request[index]).Equals(arg, StringComparison.InvariantCultureIgnoreCase);
-            }
-
             Console.WriteLine($"recieved request from {(clientIsMaster ? "Master" : client.Client.RemoteEndPoint)}:");
             foreach (object obj in request)
             {
@@ -131,12 +126,22 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     if (transaction == null)
                     {
                         rw.WriteSimpleError("ERR EXEC without MULTI");
+                        byteCounter += rr.GetByteCount();
                         break;
                     }
 
-                    rw.WriteArray([]);
+                    MemoryStream ms = new();
+                    RedisWriter transactionWriter = new(ms);
+                    ms.Write(Encoding.UTF8.GetBytes($"*{transaction.Count}\r\n"));
+                    while (transaction.TryDequeue(out object[]? storedRequest))
+                    {
+                        ExecuteRequest(storedRequest, transactionWriter, client, ref byteCounter, clientIsMaster);
+                    }
+                    ms.CopyTo(ns);
                     transaction = null;
                 }
+                byteCounter += rr.GetByteCount();
+                break;
             }
             else if (WRITE_COMMANDS.Contains(command))
             {
@@ -146,6 +151,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     {
                         transaction.Enqueue(request);
                         rw.WriteSimpleString("QUEUED");
+                        byteCounter += rr.GetByteCount();
                         continue;
                     }
                 }
@@ -176,217 +182,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                 }
             }
 
-            switch (command)
-            {
-                case "PING":
-                    rw.WriteSimpleString("PONG");
-                    break;
-                case "ECHO":
-                    rw.WriteBulkString((string)request[1]);
-                    break;
-                case "GET":
-                    {
-                        (object val, DateTime? timeout) dat;
-                        bool hasVal = false;
-                        lock (myCache)
-                        {
-                            hasVal = myCache.TryGetValue((string)request[1], out dat);
-                        }
-
-                        if (!hasVal)
-                        {
-                            rw.WriteBulkString(null);
-                        }
-                        else if (dat.timeout != null && DateTime.Now >= dat.timeout)
-                        {
-                            myCache.Remove((string)request[1]);
-                            rw.WriteBulkString(null);
-                        }
-                        else
-                        {
-                            rw.WriteBulkString(Convert.ToString(dat.val, CultureInfo.InvariantCulture));
-                        }
-                    }
-                    break;
-                case "SET":
-                    {
-                        DateTime? timeout = null;
-                        if (HasArgument("px", 3))
-                        {
-                            int milliseconds = Convert.ToInt32(request[4]);
-                            timeout = DateTime.Now.AddMilliseconds(milliseconds);
-                        }
-
-                        lock (myCache)
-                        {
-                            myCache[(string)request[1]] = ((string)request[2], timeout);
-                        }
-
-                        rw.WriteSimpleString("OK");
-                    }
-                    break;
-                case "INFO":
-                    {
-                        StringBuilder sb = new();
-                        foreach (KeyValuePair<string, object> pair in myInfo)
-                        {
-                            sb.Append(pair.Key);
-                            sb.Append(':');
-                            sb.Append(pair.Value);
-                            sb.Append('\n');
-                        }
-                        rw.WriteBulkString(sb.ToString());
-                    }
-                    break;
-                case "REPLCONF":
-                    {
-                        if (HasArgument("listening-port", 1))
-                        {
-                            int port = Convert.ToInt32(request[2]);
-                            Console.WriteLine($"adding client: {port}");
-                        }
-                        
-                        if (clientIsMaster && HasArgument("GETACK", 1))
-                        {
-                            rw.WriteArray(["REPLCONF", "ACK", byteCounter.ToString()]);
-                        }
-                        else if (HasArgument("ACK", 1))
-                        {
-                            ReplicaClient? repClient = myReplicas.Where(r => r.Client == client).FirstOrDefault();
-                            if (repClient != null)
-                            {
-                                lock (repClient)
-                                {
-                                    repClient.Offset = Convert.ToInt32(request[2]);
-                                }
-                            }
-                            else
-                            {
-                                Console.WriteLine("Could not find client when using ACK");
-                            }
-                        }
-                        else if (!clientIsMaster) rw.WriteSimpleString("OK");
-                    }
-                    break;
-                case "PSYNC":
-                    rw.WriteSimpleString($"FULLRESYNC {myInfo["master_replid"]} {myInfo["master_repl_offset"]}");
-                    rw.WriteEmptyRDB(); // TODO write actual db
-                    myReplicas.Add(new ReplicaClient(client));
-                    break;
-                case "WAIT":
-                    {
-                        if (replicaSentOffset == 0)
-                        {
-                            rw.WriteInt(myReplicas.Count);
-                            break;
-                        }
-
-                        int threshold = Convert.ToInt32(request[1]);
-                        int timeout = Convert.ToInt32(request[2]);
-
-                        async Task<int> WaitTask()
-                        {
-                            using CancellationTokenSource cts = new();
-                            cts.CancelAfter(timeout);
-
-                            int count = 0;
-                            while (count < threshold && !cts.IsCancellationRequested)
-                            {
-                                count = 0;
-                                foreach (ReplicaClient repClient in myReplicas)
-                                {
-                                    var ns = repClient.Client.GetStream();
-                                    var rw = new RedisWriter(ns);
-                                    rw.WriteStringArray(["REPLCONF", "GETACK", "*"]);
-                                }
-
-                                await Task.Delay(50);
-
-                                foreach (ReplicaClient repClient in myReplicas)
-                                {
-                                    lock (repClient)
-                                    {
-                                        if (repClient.Offset >= replicaSentOffset)
-                                            count++;
-                                    }
-                                }
-                            }  
-                            return count;
-                        }
-
-                        Task<int> runningTask = WaitTask();
-                        runningTask.Wait();
-                        rw.WriteInt(runningTask.Result);
-                        Console.WriteLine($"WAIT has ended... Result: {runningTask.Result}");
-                    }
-                    break;
-                case "CONFIG":
-                    if (HasArgument("GET", 1))
-                    {
-                        if (HasArgument("dir", 2))
-                        {
-                            rw.WriteArray(["dir", myDir]);
-                        }
-                        else if (HasArgument("dbfilename", 2))
-                        {
-                            rw.WriteArray(["dbfilename", myDbFileName]);
-                        }
-                    }
-                    break;
-                case "KEYS":
-                    {
-                        try
-                        {
-                            string pattern = Convert.ToString(request[1])!;
-                            IEnumerable<string> output = pattern switch
-                            {
-                                "*" => myCache.Keys,
-                                _ => throw new NotImplementedException()
-                            };
-                            rw.WriteStringArray(output.ToArray());
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex);
-                            throw;
-                        }
-                    }
-                    break;
-                case "INCR":
-                    try
-                    {
-                        int val;
-                        lock (myCache)
-                        {
-                            if (!myCache.TryGetValue((string)request[1], out var dat))
-                            {
-                                dat = (0, null);
-                            }
-                            val = Convert.ToInt32(dat.val);
-                            val++;
-                            myCache[(string)request[1]] = (val, dat.timeout);
-                        }        
-                        rw.WriteInt(val);
-                    }
-                    catch
-                    {
-                        rw.WriteSimpleError("ERR value is not an integer or out of range");
-                    }
-                    break;
-                case "MULTI":
-                    lock (transactionLck)
-                    {
-                        if (transaction != null)
-                        {
-                            rw.WriteSimpleError("ERR ongoing transaction");
-                            break;
-                        }
-                        transaction = new Queue<object[]>();
-                        rw.WriteSimpleString("OK");
-                    }
-                    break;
-            }
-
+            ExecuteRequest(request, rw, client, ref byteCounter, clientIsMaster);
             byteCounter += rr.GetByteCount();
         }
     }
@@ -394,6 +190,226 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
     Console.WriteLine($"closing connection: {client.Client.RemoteEndPoint}");
     client.Dispose();
     return Task.CompletedTask;
+}
+
+void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long byteCounter, bool clientIsMaster)
+{
+    bool HasArgument(string arg, int index)
+    {
+        return request.Length > index && ((string)request[index]).Equals(arg, StringComparison.InvariantCultureIgnoreCase);
+    }
+
+    string command = ((string)request[0]).ToUpperInvariant();
+    switch (command)
+    {
+        case "PING":
+            rw.WriteSimpleString("PONG");
+            break;
+        case "ECHO":
+            rw.WriteBulkString((string)request[1]);
+            break;
+        case "GET":
+            {
+                (object val, DateTime? timeout) dat;
+                bool hasVal = false;
+                lock (myCache)
+                {
+                    hasVal = myCache.TryGetValue((string)request[1], out dat);
+                }
+
+                if (!hasVal)
+                {
+                    rw.WriteBulkString(null);
+                }
+                else if (dat.timeout != null && DateTime.Now >= dat.timeout)
+                {
+                    myCache.Remove((string)request[1]);
+                    rw.WriteBulkString(null);
+                }
+                else
+                {
+                    rw.WriteBulkString(Convert.ToString(dat.val, CultureInfo.InvariantCulture));
+                }
+            }
+            break;
+        case "SET":
+            {
+                DateTime? timeout = null;
+                if (HasArgument("px", 3))
+                {
+                    int milliseconds = Convert.ToInt32(request[4]);
+                    timeout = DateTime.Now.AddMilliseconds(milliseconds);
+                }
+
+                lock (myCache)
+                {
+                    myCache[(string)request[1]] = ((string)request[2], timeout);
+                }
+
+                rw.WriteSimpleString("OK");
+            }
+            break;
+        case "INFO":
+            {
+                StringBuilder sb = new();
+                foreach (KeyValuePair<string, object> pair in myInfo)
+                {
+                    sb.Append(pair.Key);
+                    sb.Append(':');
+                    sb.Append(pair.Value);
+                    sb.Append('\n');
+                }
+                rw.WriteBulkString(sb.ToString());
+            }
+            break;
+        case "REPLCONF":
+            {
+                if (HasArgument("listening-port", 1))
+                {
+                    int port = Convert.ToInt32(request[2]);
+                    Console.WriteLine($"adding client: {port}");
+                }
+
+                if (clientIsMaster && HasArgument("GETACK", 1))
+                {
+                    rw.WriteArray(["REPLCONF", "ACK", byteCounter.ToString()]);
+                }
+                else if (HasArgument("ACK", 1))
+                {
+                    ReplicaClient? repClient = myReplicas.Where(r => r.Client == client).FirstOrDefault();
+                    if (repClient != null)
+                    {
+                        lock (repClient)
+                        {
+                            repClient.Offset = Convert.ToInt32(request[2]);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Could not find client when using ACK");
+                    }
+                }
+                else if (!clientIsMaster) rw.WriteSimpleString("OK");
+            }
+            break;
+        case "PSYNC":
+            rw.WriteSimpleString($"FULLRESYNC {myInfo["master_replid"]} {myInfo["master_repl_offset"]}");
+            rw.WriteEmptyRDB(); // TODO write actual db
+            myReplicas.Add(new ReplicaClient(client));
+            break;
+        case "WAIT":
+            {
+                if (replicaSentOffset == 0)
+                {
+                    rw.WriteInt(myReplicas.Count);
+                    break;
+                }
+
+                int threshold = Convert.ToInt32(request[1]);
+                int timeout = Convert.ToInt32(request[2]);
+
+                async Task<int> WaitTask()
+                {
+                    using CancellationTokenSource cts = new();
+                    cts.CancelAfter(timeout);
+
+                    int count = 0;
+                    while (count < threshold && !cts.IsCancellationRequested)
+                    {
+                        count = 0;
+                        foreach (ReplicaClient repClient in myReplicas)
+                        {
+                            var ns = repClient.Client.GetStream();
+                            var rw = new RedisWriter(ns);
+                            rw.WriteStringArray(["REPLCONF", "GETACK", "*"]);
+                        }
+
+                        await Task.Delay(50);
+
+                        foreach (ReplicaClient repClient in myReplicas)
+                        {
+                            lock (repClient)
+                            {
+                                if (repClient.Offset >= replicaSentOffset)
+                                    count++;
+                            }
+                        }
+                    }
+                    return count;
+                }
+
+                Task<int> runningTask = WaitTask();
+                runningTask.Wait();
+                rw.WriteInt(runningTask.Result);
+                Console.WriteLine($"WAIT has ended... Result: {runningTask.Result}");
+            }
+            break;
+        case "CONFIG":
+            if (HasArgument("GET", 1))
+            {
+                if (HasArgument("dir", 2))
+                {
+                    rw.WriteArray(["dir", myDir]);
+                }
+                else if (HasArgument("dbfilename", 2))
+                {
+                    rw.WriteArray(["dbfilename", myDbFileName]);
+                }
+            }
+            break;
+        case "KEYS":
+            {
+                try
+                {
+                    string pattern = Convert.ToString(request[1])!;
+                    IEnumerable<string> output = pattern switch
+                    {
+                        "*" => myCache.Keys,
+                        _ => throw new NotImplementedException()
+                    };
+                    rw.WriteStringArray(output.ToArray());
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                    throw;
+                }
+            }
+            break;
+        case "INCR":
+            try
+            {
+                int val;
+                lock (myCache)
+                {
+                    if (!myCache.TryGetValue((string)request[1], out var dat))
+                    {
+                        dat = (0, null);
+                    }
+                    val = Convert.ToInt32(dat.val);
+                    val++;
+                    myCache[(string)request[1]] = (val, dat.timeout);
+                }
+                rw.WriteInt(val);
+            }
+            catch
+            {
+                rw.WriteSimpleError("ERR value is not an integer or out of range");
+            }
+            break;
+        case "MULTI":
+            lock (transactionLck)
+            {
+                if (transaction != null)
+                {
+                    rw.WriteSimpleError("ERR ongoing transaction");
+                    break;
+                }
+                transaction = new Queue<object[]>();
+                rw.WriteSimpleString("OK");
+            }
+            break;
+    }
 }
 
 static RedisReader ReadNetwork(NetworkStream ns, byte[] buffer)
