@@ -94,15 +94,28 @@ namespace codecrafters_redis.src
         public Dictionary<string, (object val, DateTime? timeout)> GetDictionary()
         {
             if (cache != null) return cache;
+            Console.WriteLine("Reading RDB...");
+
             var br = StartRead();
+            Console.WriteLine("1");
             SeekToByte(br.BaseStream, 0xFE);
+            Console.WriteLine("2");
+
             SeekToByte(br.BaseStream, 0xFB);
+            Console.WriteLine("3");
+
             int keyValueSize = Convert.ToInt32(ReadSizeEncodedValue(br));
+            Console.WriteLine("4");
+
             int expirySize = Convert.ToInt32(ReadSizeEncodedValue(br));
+            Console.WriteLine("5");
+
             Dictionary<string, (object val, DateTime? timeout)> output = [];
 
             for (int i = 0; i < keyValueSize; i++)
             {
+                Console.WriteLine($"read key/val: {i}");
+
                 byte type = br.ReadByte();
                 DateTime? timeout = null;
                 if (type == 0xFC)
