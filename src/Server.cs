@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Collections.Concurrent;
+using System.Globalization;
 using RedisComponents;
 
 int port = 6379;
@@ -172,7 +173,7 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                         }
                         else
                         {
-                            rw.WriteAny(dat.val);
+                            rw.WriteBulkString(Convert.ToString(dat.val, CultureInfo.InvariantCulture));
                         }
                     }
                     break;
