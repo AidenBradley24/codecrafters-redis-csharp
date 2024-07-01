@@ -46,6 +46,9 @@ long replicaSentOffset = 0;
 
 HashSet<string> propagatedCommands = ["SET", "DEL"];
 
+Queue<object[]>? transaction = null;
+object transactionLck = new();
+
 TcpListener server = new(IPAddress.Any, port);
 server.Start();
 
@@ -117,6 +120,17 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                 Console.WriteLine(obj);
             }
             Console.WriteLine("(end of request)");
+
+            lock (transactionLck)
+            {
+                if (transaction != null)
+                {
+                    RedisWriter writer = new(ns);
+                    transaction.Enqueue(request);
+                    writer.WriteSimpleString("QUEUED");
+                    continue;
+                }
+            }
 
             string command = ((string)request[0]).ToUpperInvariant();
             if (propagatedCommands.Contains(command))
@@ -340,6 +354,18 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     catch
                     {
                         rw.WriteSimpleError("ERR value is not an integer or out of range");
+                    }
+                    break;
+                case "MULTI":
+                    lock (transactionLck)
+                    {
+                        if (transaction != null)
+                        {
+                            rw.WriteSimpleError("ERR ongoing transaction");
+                            break;
+                        }
+                        transaction = new Queue<object[]>();
+                        rw.WriteSimpleString("OK");
                     }
                     break;
             }
