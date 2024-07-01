@@ -103,7 +103,8 @@ namespace RedisComponents
             }
             catch (FileNotFoundException)
             {
-                // tread db as empty
+                // treat db as empty
+                Console.WriteLine("DB is empty.");
                 cache = [];
                 return cache;
             }
@@ -150,6 +151,7 @@ namespace RedisComponents
                 output.Add(key, (value, timeout));
             }
 
+            Console.WriteLine("DB has been read.");
             cache = output;
             return output;
         }
