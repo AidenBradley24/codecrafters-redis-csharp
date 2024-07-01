@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Globalization;
 
 namespace RedisComponents
 {
@@ -21,7 +22,7 @@ namespace RedisComponents
         private void Write(object value)
         {
             if (!Enabled) return;
-            BaseStream.Write(Encoding.UTF8.GetBytes(value.ToString() ?? ""));
+            BaseStream.Write(Encoding.UTF8.GetBytes(Convert.ToString(value, CultureInfo.InvariantCulture) ?? ""));
         }
 
         public void Flush()
@@ -49,7 +50,7 @@ namespace RedisComponents
             }
             else
             {
-                Write(value.Length.ToString());
+                Write(value.Length);
                 Write("\r\n");
                 Write(value);
             }
@@ -59,7 +60,7 @@ namespace RedisComponents
         public void WriteStringArray(string[] strings)
         {
             Write("*");
-            Write(strings.Length.ToString());
+            Write(strings.Length);
             Write("\r\n");
             foreach (string s in strings)
             {
@@ -85,12 +86,32 @@ namespace RedisComponents
         public void WriteArray(object?[] array)
         {
             Write("*");
-            Write(array.Length.ToString());
+            Write(array.Length);
             Write("\r\n");
             foreach (object? o in array)
             {
                 WriteAny(o);
             }
+        }
+
+        public void WriteSimpleError(string message)
+        {
+            if (message.Contains('\r') || message.Contains('\n'))
+            {
+                throw new ArgumentException("Value cannot contain \\r or \\n");
+            }
+            Write('-');
+            Write(message);
+            Write("\r\n");
+        }
+
+        public void WriteBulkError(string message)
+        {
+            Write("!");
+            Write(message.Length);
+            Write("\r\n");
+            Write(message);
+            Write("\r\n");
         }
 
         public void WriteAny(object? value)

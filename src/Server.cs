@@ -322,18 +322,25 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     }
                     break;
                 case "INCR":
-                    int val;
-                    lock (myCache)
+                    try
                     {
-                        if(!myCache.TryGetValue((string)request[1], out var dat))
+                        int val;
+                        lock (myCache)
                         {
-                            dat = (0, null);
-                        }
-                        val = Convert.ToInt32(dat.val);
-                        val++;
-                        myCache[(string)request[1]] = (val, dat.timeout);
+                            if (!myCache.TryGetValue((string)request[1], out var dat))
+                            {
+                                dat = (0, null);
+                            }
+                            val = Convert.ToInt32(dat.val);
+                            val++;
+                            myCache[(string)request[1]] = (val, dat.timeout);
+                        }        
+                        rw.WriteInt(val);
                     }
-                    rw.WriteInt(val);
+                    catch
+                    {
+                        rw.WriteSimpleError("ERR value is not an integer or out of range");
+                    }
                     break;
             }
 
