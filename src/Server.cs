@@ -125,44 +125,52 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
             string command = ((string)request[0]).ToUpperInvariant();
             RedisWriter rw = new(ns) { Enabled = !clientIsMaster || command == "REPLCONF" };
 
-            if (command == "EXEC")
+            bool canDoTransaction;
+            lock (transactionLck)
             {
-                lock (transactionLck)
-                {
-                    if (transaction == null)
-                    {
-                        rw.WriteSimpleError("ERR EXEC without MULTI");
-                        byteCounter += rr.GetByteCount();
-                        break;
-                    }
-                    clientMutex.WaitOne();
-
-                    MemoryStream ms = new();
-                    RedisWriter transactionWriter = new(ms);
-                    ms.Write(Encoding.UTF8.GetBytes($"*{transaction.Count}\r\n"));
-                    while (transaction.TryDequeue(out object[]? storedRequest))
-                    {
-                        ExecuteRequest(storedRequest, transactionWriter, client, ref byteCounter, false);
-                    }
-                    ms.Position = 0;
-                    ms.CopyTo(ns);
-                    transaction = null;
-                    transactionClient = null;
-                    clientMutex.ReleaseMutex();
-                }
-                byteCounter += rr.GetByteCount();
-                break;
+                canDoTransaction = transactionClient == null || transactionClient == client;
             }
-            else
+            if (canDoTransaction)
             {
-                lock (transactionLck)
+                if (command == "EXEC")
                 {
-                    if (transaction != null)
+                    lock (transactionLck)
                     {
-                        transaction.Enqueue(request);
-                        rw.WriteSimpleString("QUEUED");
-                        byteCounter += rr.GetByteCount();
-                        continue;
+                        if (transaction == null)
+                        {
+                            rw.WriteSimpleError("ERR EXEC without MULTI");
+                            byteCounter += rr.GetByteCount();
+                            break;
+                        }
+                        clientMutex.WaitOne();
+
+                        MemoryStream ms = new();
+                        RedisWriter transactionWriter = new(ms);
+                        ms.Write(Encoding.UTF8.GetBytes($"*{transaction.Count}\r\n"));
+                        while (transaction.TryDequeue(out object[]? storedRequest))
+                        {
+                            ExecuteRequest(storedRequest, transactionWriter, client, ref byteCounter, false);
+                        }
+                        ms.Position = 0;
+                        ms.CopyTo(ns);
+                        transaction = null;
+                        transactionClient = null;
+                        clientMutex.ReleaseMutex();
+                    }
+                    byteCounter += rr.GetByteCount();
+                    break;
+                }
+                else
+                {
+                    lock (transactionLck)
+                    {
+                        if (transaction != null)
+                        {
+                            transaction.Enqueue(request);
+                            rw.WriteSimpleString("QUEUED");
+                            byteCounter += rr.GetByteCount();
+                            continue;
+                        }
                     }
                 }
             }
