@@ -160,6 +160,24 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
                     byteCounter += rr.GetByteCount();
                     break;
                 }
+                else if (command == "DISCARD")
+                {
+                    lock (transactionLck)
+                    {
+                        if (transaction == null)
+                        {
+                            rw.WriteSimpleError("ERR DISCARD without MULTI");
+                            byteCounter += rr.GetByteCount();
+                            break;
+                        }
+                        transaction = null;
+                        transactionClient = null;
+                    }
+
+                    rw.WriteSimpleString("OK");
+                    byteCounter += rr.GetByteCount();
+                    break;
+                }
                 else
                 {
                     lock (transactionLck)
