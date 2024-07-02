@@ -426,23 +426,16 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
 
 void WaitForReadyToSeeClient(TcpClient client)
 {
-    while (true)
+    bool check;
+    lock (transactionLck)
     {
-        bool check;
-        lock (transactionLck)
-        {
-            check = transactionClient != null && transactionClient != client;
-        }
+        check = transactionClient != null && transactionClient != client;
+    }
 
-        if (check)
-        {
-            clientMutex.WaitOne();
-            clientMutex.ReleaseMutex();
-        }
-        else
-        {
-            break;
-        }
+    if (check)
+    {
+        clientMutex.WaitOne();
+        clientMutex.ReleaseMutex();
     }
 }
 
