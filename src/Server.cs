@@ -47,7 +47,6 @@ long replicaSentOffset = 0;
 HashSet<string> WRITE_COMMANDS = ["SET", "DEL", "INCR"];
 
 object singleThreadedModeLck = new();
-Mutex clientMutex = new(false);
 bool singleThreadedMode = false;
 
 TcpListener server = new(IPAddress.Any, port);
@@ -128,59 +127,47 @@ Task HandleClient(TcpClient client, bool clientIsMaster)
 
             if (command == "EXEC")
             {
-                lock (singleThreadedModeLck)
+                if (transaction == null)
                 {
-                    if (transaction == null)
-                    {
-                        rw.WriteSimpleError("ERR EXEC without MULTI");
-                        byteCounter += rr.GetByteCount();
-                        break;
-                    }
-                    EnableSingleThreadedMode();
-                    MemoryStream ms = new();
-                    RedisWriter transactionWriter = new(ms);
-                    ms.Write(Encoding.UTF8.GetBytes($"*{transaction.Count}\r\n"));
-                    while (transaction!.TryDequeue(out object[]? storedRequest))
-                    {
-                        ExecuteRequest(storedRequest, transactionWriter, client, ref byteCounter, clientIsMaster, ref transaction);
-                    }
-                    ms.Position = 0;
-                    ms.CopyTo(ns);
-                    transaction = null;
-                    DisableSingleThreadedMode();
+                    rw.WriteSimpleError("ERR EXEC without MULTI");
+                    byteCounter += rr.GetByteCount();
+                    break;
                 }
+                EnableSingleThreadedMode();
+                MemoryStream ms = new();
+                RedisWriter transactionWriter = new(ms);
+                ms.Write(Encoding.UTF8.GetBytes($"*{transaction.Count}\r\n"));
+                while (transaction!.TryDequeue(out object[]? storedRequest))
+                {
+                    ExecuteRequest(storedRequest, transactionWriter, client, ref byteCounter, clientIsMaster, ref transaction);
+                }
+                ms.Position = 0;
+                ms.CopyTo(ns);
+                transaction = null;
+                DisableSingleThreadedMode();
                 byteCounter += rr.GetByteCount();
                 break;
             }
             else if (command == "DISCARD")
             {
-                lock (singleThreadedModeLck)
+                if (transaction == null)
                 {
-                    if (transaction == null)
-                    {
-                        rw.WriteSimpleError("ERR DISCARD without MULTI");
-                        byteCounter += rr.GetByteCount();
-                        break;
-                    }
-                    transaction = null;
+                    rw.WriteSimpleError("ERR DISCARD without MULTI");
+                    byteCounter += rr.GetByteCount();
+                    break;
                 }
+                transaction = null;
 
                 rw.WriteSimpleString("OK");
                 byteCounter += rr.GetByteCount();
                 break;
             }
-            else
+            else if (transaction != null)
             {
-                lock (singleThreadedModeLck)
-                {
-                    if (transaction != null)
-                    {
-                        transaction.Enqueue(request);
-                        rw.WriteSimpleString("QUEUED");
-                        byteCounter += rr.GetByteCount();
-                        continue;
-                    }
-                }
+                transaction.Enqueue(request);
+                rw.WriteSimpleString("QUEUED");
+                byteCounter += rr.GetByteCount();
+                continue;
             }
             
             if (WRITE_COMMANDS.Contains(command))
@@ -436,34 +423,37 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
     }
 }
 
-void WaitForReadyToSeeClient(bool release = true)
+void WaitForReadyToSeeClient()
 {
     while (true)
     {
-        bool check;
         lock (singleThreadedModeLck)
         {
-            check = singleThreadedMode;
+            if (!singleThreadedMode)
+            {
+                break;
+            }
         }
 
-        if (singleThreadedMode)
-        {
-            clientMutex.WaitOne();
-            if(release) clientMutex.ReleaseMutex();
-        }
+        Thread.Sleep(50);
     }
 }
 
 void EnableSingleThreadedMode()
 {
-    WaitForReadyToSeeClient(false);
-    singleThreadedMode = true;
+    WaitForReadyToSeeClient();
+    lock (singleThreadedModeLck)
+    {
+        singleThreadedMode = true;
+    }
 }
 
 void DisableSingleThreadedMode()
 {
-    singleThreadedMode = false;
-    clientMutex.ReleaseMutex();
+    lock (singleThreadedModeLck)
+    {
+        singleThreadedMode = false;
+    }
 }
 
 static RedisReader ReadNetwork(NetworkStream ns, byte[] buffer)
