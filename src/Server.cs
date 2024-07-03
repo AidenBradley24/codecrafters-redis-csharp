@@ -428,12 +428,30 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
                     break;
                 }
 
-                string type = dat.val.GetType() switch
+                string type = dat.val.GetType().Name switch
                 {
+                    "RedisStream" => "stream", 
                     _ => "string"
                 };
 
                 rw.WriteSimpleString(type);
+            }
+            break;
+        case "XADD":
+            {
+                RedisStream redisStream;
+                if (myCache.TryGetValue((string)request[1], out var dat))
+                {
+                    redisStream = dat.val as RedisStream ?? throw new Exception();
+                }
+                else
+                {
+                    redisStream = new RedisStream();
+                    myCache.Add((string)request[1], (redisStream, null));
+                }
+                string nextKey = (string)request[2];
+                var entry = CaptureRemainingArgs(3, request);
+                redisStream.XADD(nextKey, entry);
             }
             break;
     }
@@ -560,6 +578,17 @@ void FinalizeHandshake(ref RedisReader? rr, NetworkStream ns, byte[] buffer)
     }
 
     Console.WriteLine("handshake 4/4");
+}
+
+static Dictionary<string, object> CaptureRemainingArgs(int start, object[] args)
+{
+    Dictionary<string, object> output = [];
+    // alternating list of keys and values
+    for (int i = start; i < args.Length; i+=2)
+    {
+        output.Add((string)args[i], args[i+1]);
+    }
+    return output;
 }
 
 class ReplicaClient(TcpClient client)
