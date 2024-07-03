@@ -17,7 +17,7 @@ namespace RedisComponents
             {
                 throw new Exception($"ERR The ID specified in XADD must be greater than {previousTime}-{previousSequenceNumber}");
             }
-            else if (msTime == previousTime && sequenceNumber < previousSequenceNumber)
+            else if (msTime == previousTime && sequenceNumber <= previousSequenceNumber)
             {
                 throw new Exception("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
