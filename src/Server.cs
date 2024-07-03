@@ -451,8 +451,15 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
                 }
                 string nextKey = (string)request[2];
                 var entry = CaptureRemainingArgs(3, request);
-                string id = redisStream.XADD(nextKey, entry);
-                rw.WriteSimpleString(id);
+                try
+                {
+                    string id = redisStream.XADD(nextKey, entry);
+                    rw.WriteSimpleString(id);
+                }
+                catch (Exception e)
+                {
+                    rw.WriteSimpleError(e.Message);
+                }
             }
             break;
     }
