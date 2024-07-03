@@ -420,6 +420,22 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
             transaction = new Queue<object[]>();
             rw.WriteSimpleString("OK");
             break;
+        case "TYPE":
+            {
+                if (!myCache.TryGetValue((string)request[1], out var dat))
+                {
+                    rw.WriteSimpleString("none");
+                    break;
+                }
+
+                string type = dat.val.GetType() switch
+                {
+                    _ => "string"
+                };
+
+                rw.WriteSimpleString(type);
+            }
+            break;
     }
 }
 
