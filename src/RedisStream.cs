@@ -13,12 +13,10 @@ namespace RedisComponents
             long msTime;
             int sequenceNumber;
             int previousSeq;
-            bool leadingZeros = false;
 
             if (key == "*")
             {
-                leadingZeros = true;
-                msTime = DateTimeOffset.Now.ToUnixTimeSeconds();
+                msTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                 if (previousSequenceNumbers.TryGetValue(msTime, out previousSeq))
                 {
                     sequenceNumber = previousSeq + 1;
@@ -68,14 +66,7 @@ namespace RedisComponents
 
             previousTime = msTime;
             previousSequenceNumbers[msTime] = sequenceNumber;
-            if (leadingZeros)
-            {
-                key = $"{msTime:0000000000000}-{sequenceNumber}";
-            }
-            else
-            {
-                key = $"{msTime}-{sequenceNumber}";
-            }
+            key = $"{msTime}-{sequenceNumber}";
         }
 
         public string XADD(string key, Dictionary<string, object> entry)
