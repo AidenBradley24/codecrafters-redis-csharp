@@ -91,7 +91,7 @@ namespace RedisComponents
         {
             var newKey = CreateKey(key);
             entries.Add(newKey, entry);
-            return key;
+            return newKey.ToString();
         }
 
         public object[] XRANGE(string start, string end)
