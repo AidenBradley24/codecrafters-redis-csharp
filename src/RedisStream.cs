@@ -18,13 +18,13 @@ namespace RedisComponents
             uint sequenceNumber;        
             if (sequenceString == "*")
             {
-                if (entries.Count == 0)
+                if (previousSequenceNumbers.TryGetValue(msTime, out uint previousSeq))
                 {
-                    sequenceNumber = msTime == 0ul ? 1u : 0u;
+                    sequenceNumber = previousSeq + 1;
                 }
                 else
                 {
-                    sequenceNumber = previousSequenceNumbers[msTime] + 1;
+                    sequenceNumber = msTime == 0ul ? 1u : 0u;
                 }
             }
             else
