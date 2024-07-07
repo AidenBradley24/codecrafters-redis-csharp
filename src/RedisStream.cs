@@ -15,11 +15,11 @@ namespace RedisComponents
             uint sequenceNumber = uint.Parse(key[(dashIndex + 1)..], CultureInfo.InvariantCulture);
             if (msTime < previousTime)
             {
-                throw new Exception($"ERR The ID specified in XADD must be greater than {previousTime}-{previousSequenceNumber}");
+                throw new Exception("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
             else if (msTime == previousTime && sequenceNumber <= previousSequenceNumber)
             {
-                throw new Exception("ERR The ID specified in XADD is equal or smaller than the target stream top item");
+                throw new Exception($"ERR The ID specified in XADD must be greater than {previousTime}-{previousSequenceNumber}");
             }
             previousTime = msTime;
             previousSequenceNumber = sequenceNumber;
