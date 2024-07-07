@@ -122,7 +122,7 @@ namespace RedisComponents
                           where entry.Key > key
                           select entry.Key;
             var result = from aKey in allKeys
-                         select new object[] { aKey, ReadOne(aKey) };
+                         select new object[] { aKey.ToString(), ReadOne(aKey) };
             return result.ToArray();
         }
 
