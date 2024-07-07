@@ -70,7 +70,7 @@ namespace RedisComponents
             return new RedisStreamKey(msTime, sequenceNumber);
         }
 
-        public object[] Read(RedisStreamKey key)
+        public object[] ReadOne(RedisStreamKey key)
         {
             var entry = entries[key];
             List<object> result = [];
@@ -82,9 +82,9 @@ namespace RedisComponents
             return [.. result];
         }
 
-        public object[] Read(string key)
+        public object[] ReadOne(string key)
         {
-            return Read(RedisStreamKey.ParseMin(key));
+            return ReadOne(RedisStreamKey.ParseMin(key));
         }
 
         public string Add(RedisStreamKey key, Dictionary<string, object> entry)
@@ -105,7 +105,7 @@ namespace RedisComponents
                           where entry.Key >= start && entry.Key <= end
                           select entry.Key;
             var result = from key in allKeys
-                         select new object[] { key.ToString(), Read(key) };
+                         select new object[] { key.ToString(), ReadOne(key) };
             return result.ToArray();
         }
 
@@ -114,6 +114,22 @@ namespace RedisComponents
             var startKey = RedisStreamKey.ParseMin(start);
             var endKey = RedisStreamKey.ParseMax(end);
             return Range(startKey, endKey);
+        }
+
+        public object[] Read(RedisStreamKey key)
+        {
+            var allKeys = from entry in entries
+                          where entry.Key > key
+                          select entry.Key;
+            var result = from aKey in allKeys
+                         select new object[] { aKey, ReadOne(aKey) };
+            return result.ToArray();
+        }
+
+        public object[] Read(string key)
+        {
+            var newKey = RedisStreamKey.ParseMin(key);
+            return Read(newKey);
         }
     }
 

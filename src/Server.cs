@@ -474,8 +474,12 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
             {
                 try
                 {
-                    RedisStream redisStream = (RedisStream)myCache[(string)request[2]].val;
-                    object[] result = redisStream.Read((string)request[3]);
+                    string key = (string)request[2];
+                    RedisStream redisStream = (RedisStream)myCache[key].val;
+                    object[] result = [new object[] {
+                        key,
+                        redisStream.Read((string)request[3])
+                    }];
                     rw.WriteArray(result);
                 }
                 catch (Exception e)
