@@ -470,10 +470,16 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
             }
             break;
         case "XREAD":
+            try
             {
                 RedisStream redisStream = (RedisStream)myCache[(string)request[1]].val;
                 object[] result = redisStream.Read((string)request[2]);
                 rw.WriteArray(result);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
             }
             break;
     }
