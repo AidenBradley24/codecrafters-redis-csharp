@@ -112,6 +112,9 @@ namespace RedisComponents
         public long Time { get; } = time;
         public int Sequence { get; } = sequence;
 
+        public static RedisStreamKey MinValue { get => new(0, 0); }
+        public static RedisStreamKey MaxValue { get => new(long.MaxValue, int.MaxValue); }
+
         public int CompareTo(RedisStreamKey other)
         {
             if (Time == other.Time) return Sequence.CompareTo(other.Sequence);
@@ -137,6 +140,7 @@ namespace RedisComponents
 
         public static RedisStreamKey ParseMin(string s)
         {
+            if (s == "-") return MinValue;
             (long time, int? seq) = BaseParse(s);
             seq ??= 0;
             return new RedisStreamKey(time, seq.Value);
@@ -144,6 +148,7 @@ namespace RedisComponents
 
         public static RedisStreamKey ParseMax(string s)
         {
+            if (s == "+") return MaxValue;
             (long time, int? seq) = BaseParse(s);
             seq ??= int.MaxValue;
             return new RedisStreamKey(time, seq.Value);
