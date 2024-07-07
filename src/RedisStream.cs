@@ -8,12 +8,30 @@ namespace RedisComponents
         private ulong previousTime = 0;
         private uint previousSequenceNumber = 0;
     
-        private void ValidateKey(string key)
+        private void ValidateKey(ref string key)
         {
             int dashIndex = key.IndexOf('-');
-            ulong msTime = ulong.Parse(key[..dashIndex], CultureInfo.InvariantCulture);
-            uint sequenceNumber = uint.Parse(key[(dashIndex + 1)..], CultureInfo.InvariantCulture);
+            string timeString = key[..dashIndex];
+            string sequenceString = key[(dashIndex + 1)..];
+            ulong msTime = ulong.Parse(timeString, CultureInfo.InvariantCulture);
 
+            uint sequenceNumber;        
+            if (sequenceString == "*")
+            {
+                if (entries.Count == 0)
+                {
+                    sequenceNumber = msTime == 0ul ? 1u : 0u;
+                }
+                else
+                {
+                    sequenceNumber = previousSequenceNumber + 1;
+                }
+            }
+            else
+            {
+                sequenceNumber = uint.Parse(sequenceString, CultureInfo.InvariantCulture);
+            }
+            
             if (msTime == 0ul && sequenceNumber == 0u)
             {
                 throw new Exception("ERR The ID specified in XADD must be greater than 0-0");
@@ -33,7 +51,7 @@ namespace RedisComponents
 
         public string XADD(string key, Dictionary<string, object> entry)
         {
-            ValidateKey(key);
+            ValidateKey(ref key);
             entries.Add(key, entry);
             return key;
         }
