@@ -458,7 +458,6 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
                     rw.WriteSimpleError(e.Message);
                 }
             }
