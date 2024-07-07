@@ -14,17 +14,17 @@ namespace RedisComponents
             ulong msTime = ulong.Parse(key[..dashIndex], CultureInfo.InvariantCulture);
             uint sequenceNumber = uint.Parse(key[(dashIndex + 1)..], CultureInfo.InvariantCulture);
 
-            if (msTime < previousTime)
+            if (msTime == 0ul && sequenceNumber == 0u)
+            {
+                throw new Exception("ERR The ID specified in XADD must be greater than 0-0");
+            }
+            else if (msTime < previousTime)
             {
                 throw new Exception("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
             else if (msTime == previousTime && sequenceNumber <= previousSequenceNumber)
             {
                 throw new Exception("ERR The ID specified in XADD is equal or smaller than the target stream top item");
-            }
-            else if (msTime == 0ul && sequenceNumber == 0u)
-            {
-                throw new Exception("ERR The ID specified in XADD must be greater than 0-0");
             }
 
             previousTime = msTime;
