@@ -6,7 +6,7 @@ namespace RedisComponents
     {
         private readonly Dictionary<string, Dictionary<string, object>> entries = [];
         private ulong previousTime = 0;
-        private uint previousSequenceNumber = 0;
+        private readonly Dictionary<ulong, uint> previousSequenceNumbers = [];
     
         private void ValidateKey(ref string key)
         {
@@ -24,7 +24,7 @@ namespace RedisComponents
                 }
                 else
                 {
-                    sequenceNumber = previousSequenceNumber + 1;
+                    sequenceNumber = previousSequenceNumbers[msTime] + 1;
                 }
             }
             else
@@ -40,13 +40,13 @@ namespace RedisComponents
             {
                 throw new Exception("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
-            else if (msTime == previousTime && sequenceNumber <= previousSequenceNumber)
+            else if (msTime == previousTime && sequenceNumber <= previousSequenceNumbers[msTime])
             {
                 throw new Exception("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
 
             previousTime = msTime;
-            previousSequenceNumber = sequenceNumber;
+            previousSequenceNumbers[msTime] = sequenceNumber;
             key = $"{msTime}-{sequenceNumber}";
         }
 
