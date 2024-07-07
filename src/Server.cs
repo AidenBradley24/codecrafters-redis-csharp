@@ -453,7 +453,7 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
                 var entry = CaptureRemainingArgs(3, request);
                 try
                 {
-                    string id = redisStream.XADD(nextKey, entry);
+                    string id = redisStream.Add(nextKey, entry);
                     rw.WriteBulkString(id);
                 }
                 catch (Exception e)
@@ -465,7 +465,14 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
         case "XRANGE":
             {
                 RedisStream redisStream = (RedisStream)myCache[(string)request[1]].val;
-                object[] result = redisStream.XRANGE((string)request[2], (string)request[3]);
+                object[] result = redisStream.Range((string)request[2], (string)request[3]);
+                rw.WriteArray(result);
+            }
+            break;
+        case "XREAD":
+            {
+                RedisStream redisStream = (RedisStream)myCache[(string)request[1]].val;
+                object[] result = redisStream.Read((string)request[2]);
                 rw.WriteArray(result);
             }
             break;

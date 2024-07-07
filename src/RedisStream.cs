@@ -87,23 +87,33 @@ namespace RedisComponents
             return Read(RedisStreamKey.ParseMin(key));
         }
 
-        public string XADD(string key, Dictionary<string, object> entry)
+        public string Add(RedisStreamKey key, Dictionary<string, object> entry)
         {
-            var newKey = CreateKey(key);
-            entries.Add(newKey, entry);
-            return newKey.ToString();
+            entries.Add(key, entry);
+            return key.ToString();
         }
 
-        public object[] XRANGE(string start, string end)
+        public string Add(string key, Dictionary<string, object> entry)
         {
-            var startKey = RedisStreamKey.ParseMin(start);
-            var endKey = RedisStreamKey.ParseMax(end);
+            var newKey = CreateKey(key);
+            return Add(newKey, entry);
+        }
+
+        public object[] Range(RedisStreamKey start, RedisStreamKey end)
+        {
             var allKeys = from entry in entries
-                          where entry.Key >= startKey && entry.Key <= endKey
+                          where entry.Key >= start && entry.Key <= end
                           select entry.Key;
             var result = from key in allKeys
                          select new object[] { key.ToString(), Read(key) };
             return result.ToArray();
+        }
+
+        public object[] Range(string start, string end)
+        {
+            var startKey = RedisStreamKey.ParseMin(start);
+            var endKey = RedisStreamKey.ParseMax(end);
+            return Range(startKey, endKey);
         }
     }
 
