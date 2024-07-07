@@ -462,6 +462,13 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
                 }
             }
             break;
+        case "XRANGE":
+            {
+                RedisStream redisStream = (RedisStream)myCache[(string)request[1]].val;
+                object[] result = redisStream.XRANGE((string)request[2], (string)request[3]);
+                rw.WriteArray(result);
+            }
+            break;
     }
 }
 
