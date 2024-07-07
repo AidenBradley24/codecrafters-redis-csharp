@@ -15,10 +15,11 @@ namespace RedisComponents
             string sequenceString = key[(dashIndex + 1)..];
             ulong msTime = ulong.Parse(timeString, CultureInfo.InvariantCulture);
 
-            uint sequenceNumber;        
+            uint sequenceNumber;
+            uint previousSeq;
             if (sequenceString == "*")
             {
-                if (previousSequenceNumbers.TryGetValue(msTime, out uint previousSeq))
+                if (previousSequenceNumbers.TryGetValue(msTime, out previousSeq))
                 {
                     sequenceNumber = previousSeq + 1;
                 }
@@ -29,6 +30,7 @@ namespace RedisComponents
             }
             else
             {
+                previousSequenceNumbers.TryGetValue(msTime, out previousSeq);
                 sequenceNumber = uint.Parse(sequenceString, CultureInfo.InvariantCulture);
             }
             
@@ -40,7 +42,7 @@ namespace RedisComponents
             {
                 throw new Exception("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
-            else if (msTime == previousTime && sequenceNumber <= previousSequenceNumbers[msTime])
+            else if (msTime == previousTime && sequenceNumber <= previousSeq)
             {
                 throw new Exception("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
