@@ -105,7 +105,7 @@ namespace RedisComponents
                           where entry.Key >= start && entry.Key <= end
                           select entry.Key;
             var result = from key in allKeys
-                         select new object[] { key.ToString(), ReadOne(key) };
+                         select new object[] { key, ReadOne(key) };
             return result.ToArray();
         }
 
@@ -122,7 +122,7 @@ namespace RedisComponents
                           where entry.Key > key
                           select entry.Key;
             var result = from aKey in allKeys
-                         select new object[] { aKey.ToString(), ReadOne(aKey) };
+                         select new object[] { aKey, ReadOne(aKey) };
             return result.ToArray();
         }
 

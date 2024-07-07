@@ -134,7 +134,7 @@ namespace RedisComponents
             }
             else
             {
-                throw new Exception($"Invalid type: {value.GetType()}");
+                WriteBulkString(value.ToString());
             }
         }
     }

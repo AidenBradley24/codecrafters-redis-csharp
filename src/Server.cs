@@ -472,14 +472,32 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
         case "XREAD":
             if (HasArgument("streams", 1))
             {
+                List<string> cacheKeys = [];
+                List<string> streamKeys = [];
+                for (int i = 2; i < request.Length; i++)
+                {
+                    string current = (string)request[i];
+                    if (char.IsDigit(current[0]))
+                    {
+                        streamKeys.Add(current);
+                    }
+                    else
+                    {
+                        cacheKeys.Add(current);
+                    }
+                }
+
                 try
                 {
-                    string key = (string)request[2];
-                    RedisStream redisStream = (RedisStream)myCache[key].val;
-                    object[] result = [new object[] {
-                        key,
-                        redisStream.Read((string)request[3])
-                    }];
+                    object[] result = cacheKeys.Select((cacheKey, index) =>
+                    {
+                        RedisStream redisStream = (RedisStream)myCache[cacheKey].val;
+                        return new object[] 
+                        {
+                            cacheKey,
+                            redisStream.Read(streamKeys[index])
+                        };
+                    }).ToArray();
                     rw.WriteArray(result);
                 }
                 catch (Exception e)
