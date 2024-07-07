@@ -47,6 +47,7 @@ namespace RedisComponents
 
             previousTime = msTime;
             previousSequenceNumber = sequenceNumber;
+            key = $"{msTime}-{sequenceNumber}";
         }
 
         public string XADD(string key, Dictionary<string, object> entry)
