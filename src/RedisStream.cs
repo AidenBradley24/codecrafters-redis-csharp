@@ -10,15 +10,13 @@ namespace RedisComponents
     
         private void ValidateKey(ref string key)
         {
-            int dashIndex = key.IndexOf('-');
-            string timeString = key[..dashIndex];
-            string sequenceString = key[(dashIndex + 1)..];
-            ulong msTime = ulong.Parse(timeString, CultureInfo.InvariantCulture);
-
+            ulong msTime;
             uint sequenceNumber;
             uint previousSeq;
-            if (sequenceString == "*")
+
+            if (key == "*")
             {
+                msTime = (ulong)DateTimeOffset.Now.ToUnixTimeSeconds();
                 if (previousSequenceNumbers.TryGetValue(msTime, out previousSeq))
                 {
                     sequenceNumber = previousSeq + 1;
@@ -30,8 +28,27 @@ namespace RedisComponents
             }
             else
             {
-                previousSequenceNumbers.TryGetValue(msTime, out previousSeq);
-                sequenceNumber = uint.Parse(sequenceString, CultureInfo.InvariantCulture);
+                int dashIndex = key.IndexOf('-');
+                string timeString = key[..dashIndex];
+                string sequenceString = key[(dashIndex + 1)..];
+                msTime = ulong.Parse(timeString, CultureInfo.InvariantCulture);
+
+                if (sequenceString == "*")
+                {
+                    if (previousSequenceNumbers.TryGetValue(msTime, out previousSeq))
+                    {
+                        sequenceNumber = previousSeq + 1;
+                    }
+                    else
+                    {
+                        sequenceNumber = msTime == 0ul ? 1u : 0u;
+                    }
+                }
+                else
+                {
+                    previousSequenceNumbers.TryGetValue(msTime, out previousSeq);
+                    sequenceNumber = uint.Parse(sequenceString, CultureInfo.InvariantCulture);
+                }
             }
             
             if (msTime == 0ul && sequenceNumber == 0u)
