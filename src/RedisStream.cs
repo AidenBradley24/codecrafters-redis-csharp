@@ -194,6 +194,8 @@ namespace RedisComponents
         public static RedisStreamKey ParseMin(string s)
         {
             if (s == "-") return MinValue;
+            if (s == "+") return MaxValue;
+            if (s == "$") return MaxValue;
             (long time, int? seq) = BaseParse(s);
             seq ??= 0;
             return new RedisStreamKey(time, seq.Value);
@@ -201,7 +203,9 @@ namespace RedisComponents
 
         public static RedisStreamKey ParseMax(string s)
         {
+            if (s == "-") return MinValue;
             if (s == "+") return MaxValue;
+            if (s == "$") return MaxValue;
             (long time, int? seq) = BaseParse(s);
             seq ??= int.MaxValue;
             return new RedisStreamKey(time, seq.Value);
