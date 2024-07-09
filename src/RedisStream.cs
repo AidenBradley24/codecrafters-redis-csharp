@@ -8,6 +8,7 @@ namespace RedisComponents
         private readonly Dictionary<RedisStreamKey, Dictionary<string, object>> entries = [];
         private long previousTime = 0;
         private readonly Dictionary<long, int> previousSequenceNumbers = [];
+        private volatile bool blocked = false;
     
         private RedisStreamKey CreateKey(string s)
         {
@@ -90,6 +91,7 @@ namespace RedisComponents
         public string Add(RedisStreamKey key, Dictionary<string, object> entry)
         {
             entries.Add(key, entry);
+            blocked = false;
             return key.ToString();
         }
 
@@ -130,6 +132,31 @@ namespace RedisComponents
         {
             var newKey = RedisStreamKey.ParseMin(key);
             return Read(newKey);
+        }
+
+        public async Task<object[]> BlockRead(RedisStreamKey key, int timeout)
+        {
+            blocked = true;
+            await Block(timeout);
+            return Read(key);
+        }
+
+        public async Task<object[]> BlockRead(string key, int timeout)
+        {
+            var newKey = RedisStreamKey.ParseMin(key);
+            return await BlockRead(newKey, timeout);
+        }
+
+        private async Task Block(int milliseconds)
+        {
+            using CancellationTokenSource cts = new();
+            cts.CancelAfter(milliseconds);
+            blocked = true;
+            while (blocked && !cts.IsCancellationRequested)
+            {
+                await Task.Delay(50);
+            }
+            blocked = false;
         }
     }
 

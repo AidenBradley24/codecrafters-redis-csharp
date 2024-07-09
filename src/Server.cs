@@ -430,7 +430,7 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
 
                 string type = dat.val.GetType().Name switch
                 {
-                    "RedisStream" => "stream", 
+                    nameof(RedisStream) => "stream", 
                     _ => "string"
                 };
 
@@ -470,29 +470,50 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
             }
             break;
         case "XREAD":
-            if (HasArgument("streams", 1))
             {
-                List<string> cacheKeys = [];
-                List<string> streamKeys = [];
-                for (int i = 2; i < request.Length; i++)
+                int head = 1;
+                int? blockTimeout = null;
+                if (HasArgument("block", head))
                 {
-                    string current = (string)request[i];
-                    if (char.IsDigit(current[0]))
-                    {
-                        streamKeys.Add(current);
-                    }
-                    else
-                    {
-                        cacheKeys.Add(current);
-                    }
+                    head++;
+                    blockTimeout = Convert.ToInt32(request[head]);
+                    head++;
                 }
 
-                try
+                if (HasArgument("streams", head))
                 {
+                    head++;
+
+                    if (blockTimeout != null)
+                    {
+                        string cacheKey = (string)request[head++];
+                        string streamKey = (string)request[head++];
+                        RedisStream redisStream = (RedisStream)myCache[cacheKey].val;
+                        using var task = redisStream.BlockRead(streamKey, blockTimeout.Value);
+                        task.Wait();
+                        rw.WriteArray([new object[] { cacheKey, task.Result }]);
+                        break;
+                    }
+
+                    List<string> cacheKeys = [];
+                    List<string> streamKeys = [];
+                    for (; head < request.Length; head++)
+                    {
+                        string current = (string)request[head];
+                        if (char.IsDigit(current[0]))
+                        {
+                            streamKeys.Add(current);
+                        }
+                        else
+                        {
+                            cacheKeys.Add(current);
+                        }
+                    }
+
                     object[] result = cacheKeys.Select((cacheKey, index) =>
                     {
                         RedisStream redisStream = (RedisStream)myCache[cacheKey].val;
-                        return new object[] 
+                        return new object[]
                         {
                             cacheKey,
                             redisStream.Read(streamKeys[index])
@@ -500,12 +521,10 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
                     }).ToArray();
                     rw.WriteArray(result);
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
-
             }
+
+
+
             break;
     }
 }
