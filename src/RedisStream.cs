@@ -150,7 +150,7 @@ namespace RedisComponents
         private async Task Block(int milliseconds)
         {
             using CancellationTokenSource cts = new();
-            cts.CancelAfter(milliseconds);
+            if (milliseconds != 0) cts.CancelAfter(milliseconds);
             blocked = true;
             while (blocked && !cts.IsCancellationRequested)
             {
