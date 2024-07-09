@@ -133,6 +133,7 @@ namespace RedisComponents
         public object[]? Read(string key)
         {
             var newKey = key == "$" ? maxKey : RedisStreamKey.ParseMin(key);
+            Console.WriteLine(key);
             return Read(newKey);
         }
 
