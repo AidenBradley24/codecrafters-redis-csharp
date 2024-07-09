@@ -491,7 +491,7 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
                         RedisStream redisStream = (RedisStream)myCache[cacheKey].val;
                         using var task = redisStream.BlockRead(streamKey, blockTimeout.Value);
                         task.Wait();
-                        rw.WriteArray([new object[] { cacheKey, task.Result }]);
+                        rw.WriteArray([new object?[] { cacheKey, task.Result }]);
                         break;
                     }
 
@@ -513,7 +513,7 @@ void ExecuteRequest(object[] request, RedisWriter rw, TcpClient client, ref long
                     object[] result = cacheKeys.Select((cacheKey, index) =>
                     {
                         RedisStream redisStream = (RedisStream)myCache[cacheKey].val;
-                        return new object[]
+                        return new object?[]
                         {
                             cacheKey,
                             redisStream.Read(streamKeys[index])

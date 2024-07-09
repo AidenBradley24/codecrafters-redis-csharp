@@ -118,30 +118,30 @@ namespace RedisComponents
             return Range(startKey, endKey);
         }
 
-        public object[] Read(RedisStreamKey key)
+        public object[]? Read(RedisStreamKey key)
         {
             var allKeys = from entry in entries
                           where entry.Key > key
                           select entry.Key;
             var result = from aKey in allKeys
                          select new object[] { aKey, ReadOne(aKey) };
-            return result.ToArray();
+            return result.Any() ? result.ToArray() : null;
         }
 
-        public object[] Read(string key)
+        public object[]? Read(string key)
         {
             var newKey = RedisStreamKey.ParseMin(key);
             return Read(newKey);
         }
 
-        public async Task<object[]> BlockRead(RedisStreamKey key, int timeout)
+        public async Task<object[]?> BlockRead(RedisStreamKey key, int timeout)
         {
             blocked = true;
             await Block(timeout);
             return Read(key);
         }
 
-        public async Task<object[]> BlockRead(string key, int timeout)
+        public async Task<object[]?> BlockRead(string key, int timeout)
         {
             var newKey = RedisStreamKey.ParseMin(key);
             return await BlockRead(newKey, timeout);
