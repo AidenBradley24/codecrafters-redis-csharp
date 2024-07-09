@@ -133,7 +133,6 @@ namespace RedisComponents
         public object[]? Read(string key)
         {
             var newKey = key == "$" ? maxKey : RedisStreamKey.ParseMin(key);
-            Console.WriteLine(key);
             return Read(newKey);
         }
 
@@ -146,7 +145,7 @@ namespace RedisComponents
 
         public async Task<object[]?> BlockRead(string key, int timeout)
         {
-            var newKey = RedisStreamKey.ParseMin(key);
+            var newKey = key == "$" ? maxKey : RedisStreamKey.ParseMin(key);
             return await BlockRead(newKey, timeout);
         }
 
