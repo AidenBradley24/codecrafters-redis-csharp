@@ -8,7 +8,7 @@ namespace RedisComponents
         private readonly Dictionary<RedisStreamKey, Dictionary<string, object>> entries = [];
         private long previousTime = 0;
         private readonly Dictionary<long, int> previousSequenceNumbers = [];
-        private RedisStreamKey? lastKey = null;
+        private RedisStreamKey maxKey = RedisStreamKey.MinValue;
         private volatile bool blocked = false;
     
         private RedisStreamKey CreateKey(string s)
@@ -92,7 +92,7 @@ namespace RedisComponents
         public string Add(RedisStreamKey key, Dictionary<string, object> entry)
         {
             entries.Add(key, entry);
-            lastKey = key;
+            if (key > maxKey) maxKey = key;
             blocked = false;
             return key.ToString();
         }
@@ -132,8 +132,8 @@ namespace RedisComponents
 
         public object[]? Read(string key)
         {
-            var newKey = key == "$" ? lastKey : RedisStreamKey.ParseMin(key);
-            return newKey == null ? null : Read(newKey.Value);
+            var newKey = key == "$" ? maxKey : RedisStreamKey.ParseMin(key);
+            return Read(newKey);
         }
 
         public async Task<object[]?> BlockRead(RedisStreamKey key, int timeout)
